@@ -13,7 +13,7 @@ h1{font-size:1.3rem} h2{font-size:1.1rem} h3{font-size:1rem}
 p{margin:0 0 8px}
 .muted{color:var(--muted)} .small{font-size:.85rem}
 .screen{max-width:720px;margin:0 auto;padding:12px 14px 90px}
-.topbar{display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:6;margin:-12px -14px 14px;padding:calc(22px + env(safe-area-inset-top)) 14px 12px;background:var(--bar);border-bottom:1px solid var(--line);box-shadow:0 1px 0 var(--accent-line),0 6px 14px rgba(0,0,0,.35)}
+.topbar{display:flex;align-items:center;min-height:52px;gap:10px;position:sticky;top:0;z-index:6;margin:-12px -14px 14px;padding:calc(14px + env(safe-area-inset-top)) 14px 14px;background:var(--bar);border-bottom:1px solid var(--line);box-shadow:0 1px 0 var(--accent-line),0 6px 14px rgba(0,0,0,.35)}
 .topbar .grow{flex:1}
 .badge{font-size:.8rem;padding:4px 10px;border-radius:99px;background:var(--card2);border:1px solid var(--line);cursor:pointer;white-space:nowrap}
 .badge.ok{color:var(--accent)} .badge.wait{color:var(--warn)} .badge.err{color:var(--bad)}
@@ -152,3 +152,11 @@ html[data-bg=emojis] body{background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .leginner{margin-top:10px;padding:10px 12px;background:var(--card2);border:1px solid var(--line);border-radius:12px}
 .legend{margin:3px 0}
 .calnav .grow{flex:1}
+
+/* barre du haut : tout sur le meme axe (le titre n'a plus de marge basse) */
+.topbar h1{margin:0;line-height:1.1}
+.topbar .btn,.topbar .badge{align-self:center;margin:0}
+/* calendrier : plus d'air au-dessus des chiffres, lettres des jours dans une barre */
+.cday{padding:11px 0 4px !important}
+.calhead{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:6px 0 !important;margin-bottom:4px !important;border-bottom:1px solid var(--line) !important}
+.cal{padding:0 1px}
