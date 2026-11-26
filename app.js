@@ -47,7 +47,7 @@ function dayKey(s) { return String(s || '').toLowerCase().normalize('NFD').repla
 const DAYS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
 const DAY_NAMES = { lun: 'Lundi', mar: 'Mardi', mer: 'Mercredi', jeu: 'Jeudi', ven: 'Vendredi', sam: 'Samedi', dim: 'Dimanche' };
 const GROUPES = ['Pectoraux', 'Dos', 'Épaules', 'Biceps', 'Triceps', 'Quadriceps', 'Ischios', 'Fessiers', 'Mollets', 'Abdos', 'Autre'];
-const VERSION = '1.5', VERSION_DATE = '26/11/2026';
+const VERSION = '1.6', VERSION_DATE = '26/11/2026';
 const GROUP_COLORS = { 'Pectoraux': '#ef6f6c', 'Dos': '#5b9dff', 'Épaules': '#f5a35b', 'Biceps': '#3ddc97', 'Triceps': '#b18cff', 'Quadriceps': '#4fd1d9', 'Ischios': '#e4c44f', 'Fessiers': '#ff8fc2', 'Mollets': '#8fbf5b', 'Abdos': '#a8b3c7', 'Autre': '#7d8596' };
 function gcolor(g) { return GROUP_COLORS[g] || GROUP_COLORS['Autre']; }
 const THEMES = [['vert', 'Vert', '#3ddc97'], ['bleu', 'Bleu', '#5b9dff'], ['orange', 'Orange', '#ffa24d'], ['violet', 'Violet', '#b18cff'], ['rose', 'Rose', '#ff7eb6'], ['jaune', 'Jaune', '#f2cf4a']];
@@ -590,11 +590,10 @@ function renderHome() {
   } else {
     root.append(h('button', { class: 'go', onclick: openGo }, 'GO!', h('small', { text: 'Lancer une séance' })));
   }
+  const qb = function (ico, label, fn) { return h('button', { class: 'btn ghost qbtn', onclick: fn }, h('span', { class: 'qi', text: ico }), h('span', { class: 'ql', text: label })); };
   root.append(h('div', { class: 'grid2 quick' },
-    h('button', { class: 'btn ghost', text: '⚖ Poids', onclick: openWeigh }),
-    h('button', { class: 'btn ghost', text: '🏃 Autre sport', onclick: openSport }),
-    h('button', { class: 'btn ghost', text: '📌 Événement', onclick: openEvent }),
-    h('button', { class: 'btn ghost', text: '🕘 Séance passée', onclick: openPast })));
+    qb('⚖', 'Poids', openWeigh), qb('🏃', 'Autre sport', openSport),
+    qb('📌', 'Événement', openEvent), qb('🕘', 'Séance passée', openPast)));
   if (!empty) root.append(renderCalendar());
   root.append(renderKpis());
   return root;
@@ -664,11 +663,14 @@ function renderCalendar() {
     const y = S.cal.y, m = S.cal.m, days = calModel(y, m), today = todayStr();
     const move = function (n) { const d = new Date(y, m + n, 1); S.cal = { y: d.getFullYear(), m: d.getMonth() }; draw(); };
     card.append(h('div', { class: 'calnav' },
-      h('button', { class: 'btn small ghost', text: '‹', onclick: function () { move(-1); } }),
+      h('button', { class: 'btn small calarrow', text: '‹', onclick: function () { move(-1); } }),
       h('h2', { class: 'grow', text: MONTHS[m] + ' ' + y }),
-      h('button', { class: 'btn small ghost', text: '›', onclick: function () { move(1); } })));
+      h('button', { class: 'btn small calarrow', text: '›', onclick: function () { move(1); } })));
+    const box = h('div', { class: 'calbox' });
+    const head = h('div', { class: 'calhead' });
+    ['L', 'M', 'M', 'J', 'V', 'S', 'D'].forEach(function (l, i) { head.append(h('span', { class: 'calh' + (i >= 5 ? ' we' : ''), text: l })); });
+    box.append(head);
     const grid = h('div', { class: 'cal' });
-    ['L', 'M', 'M', 'J', 'V', 'S', 'D'].forEach(function (l, i) { grid.append(h('span', { class: 'calh' + (i >= 5 ? ' we' : ''), text: l })); });
     days.forEach(function (d) {
       if (!d.inMonth) { grid.append(h('span', { class: 'cday blank' })); return; }
       const evTypes = []; d.evs.forEach(function (e) { if (evTypes.indexOf(e.type) < 0) evTypes.push(e.type); });
@@ -678,19 +680,28 @@ function renderCalendar() {
       grid.append(h('button', { class: 'cday', onclick: function () { openDay(d); } },
         h('span', { class: 'cn ' + d.cls + (d.k === today ? ' today' : ''), text: String(d.num) }), dots));
     });
-    card.append(grid);
+    box.append(grid);
+    card.append(box);
     const inM = days.filter(function (d) { return d.inMonth; });
     const ns = inM.reduce(function (a, d) { return a + d.sess.length; }, 0), na = inM.reduce(function (a, d) { return a + d.acts.length; }, 0);
-    card.append(h('p', { class: 'small muted', style: 'margin:10px 0 6px', text: ns + ' séance' + (ns > 1 ? 's' : '') + (na ? ' · ' + na + ' autre' + (na > 1 ? 's' : '') + ' sport' + (na > 1 ? 's' : '') : '') + ' ce mois-ci' }));
+    const sum = ns + ' séance' + (ns > 1 ? 's' : '') + (na ? ' · ' + na + ' autre' + (na > 1 ? 's' : '') + ' sport' + (na > 1 ? 's' : '') : '') + ' ce mois-ci';
+    const panel = h('div', { class: 'legpanel' + (S.calLegend ? ' open' : '') });
+    const inner = h('div', { class: 'leginner' });
     const lg = h('div', { class: 'legend' });
     [['done', 'Séance'], ['stripe', 'Autre sport à la place'], ['ring', 'Prévue'], ['moved', 'Déplacée'], ['missed', 'Manquée']].forEach(function (x) {
       lg.append(h('span', { class: 'lg' }, h('i', { class: 'cn mini ' + x[0] }), x[1]));
     });
     lg.append(h('span', { class: 'lg' }, h('i', { class: 'sd' }), 'Autre sport'));
-    card.append(lg);
+    inner.append(lg);
     const evl = h('div', { class: 'legend' });
     Object.keys(EV_COLORS).forEach(function (t) { evl.append(h('span', { class: 'lg' }, h('i', { class: 'edot', style: 'background:' + EV_COLORS[t] }), t)); });
-    card.append(evl);
+    inner.append(evl);
+    panel.append(inner);
+    const chev = h('span', { class: 'legchev', text: S.calLegend ? '▴' : '▾' });
+    card.append(h('div', { class: 'calfoot' },
+      h('span', { class: 'small muted', text: sum }),
+      h('button', { class: 'legtoggle', onclick: function () { S.calLegend = !S.calLegend; panel.classList.toggle('open', S.calLegend); chev.textContent = S.calLegend ? '▴' : '▾'; } }, 'Légende ', chev)));
+    card.append(panel);
   }
   draw();
   return card;
@@ -1236,7 +1247,7 @@ function tabExercises() {
   }
   search.addEventListener('input', fill); fill();
   wrap.append(h('div', { class: 'row', style: 'margin-bottom:10px' }, h('div', { class: 'grow' }, search),
-    h('button', { class: 'btn primary', text: 'Nouvel exo', onclick: function () { exerciseForm(null); } })), box);
+    h('button', { class: 'btn primary', text: '+ Exercice', onclick: function () { exerciseForm(null); } })), box);
   wrap.append(h('div', { style: 'margin-top:4px' },
     h('p', { class: 'small muted', text: (S.data.config.exercices || []).length + ' exercices · ★ = principal (objectif 1RM)' }),
     h('button', { class: 'btn small ghost', text: 'Compléter avec le catalogue de base', onclick: function () {

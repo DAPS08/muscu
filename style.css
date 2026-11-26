@@ -13,7 +13,7 @@ h1{font-size:1.3rem} h2{font-size:1.1rem} h3{font-size:1rem}
 p{margin:0 0 8px}
 .muted{color:var(--muted)} .small{font-size:.85rem}
 .screen{max-width:720px;margin:0 auto;padding:12px 14px 90px}
-.topbar{display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:6;margin:-12px -14px 14px;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;background:var(--bar);border-bottom:1px solid var(--line);box-shadow:0 1px 0 var(--accent-line),0 6px 14px rgba(0,0,0,.35)}
+.topbar{display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:6;margin:-12px -14px 14px;padding:calc(22px + env(safe-area-inset-top)) 14px 12px;background:var(--bar);border-bottom:1px solid var(--line);box-shadow:0 1px 0 var(--accent-line),0 6px 14px rgba(0,0,0,.35)}
 .topbar .grow{flex:1}
 .badge{font-size:.8rem;padding:4px 10px;border-radius:99px;background:var(--card2);border:1px solid var(--line);cursor:pointer;white-space:nowrap}
 .badge.ok{color:var(--accent)} .badge.wait{color:var(--warn)} .badge.err{color:var(--bad)}
@@ -115,12 +115,16 @@ html[data-bg=emojis] body{background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .pill.rest:empty{display:none}
 .sub .btn{flex:1;min-height:48px;font-size:1rem;padding:10px 12px}
 /* calendrier */
-.calnav{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.calnav h2{margin:0;text-align:center;display:block}
-.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.calnav{display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:6px;background:var(--card2);border:1px solid var(--line);border-radius:14px}
+.calnav h2{margin:0;text-align:center;display:block;font-size:1.15rem}
+.calarrow{background:var(--bg);border:1px solid var(--accent-line);color:var(--accent);min-width:42px;font-size:1.2rem}
+.calbox{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:8px 6px 6px}
+.calhead{display:grid;grid-template-columns:repeat(7,1fr);padding-bottom:6px;margin-bottom:2px;border-bottom:1px solid var(--line)}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:0}
+.cal .cday:nth-child(n+8){border-top:1px solid rgba(255,255,255,.06)}
 .calh{text-align:center;font-weight:800;font-size:.85rem;padding:4px 0;color:var(--text)}
 .calh.we{color:#ff6b6b}
-.cday{background:none;border:0;display:flex;flex-direction:column;align-items:center;padding:2px 0;gap:2px;cursor:pointer;color:var(--text)}
+.cday{background:none;border:0;display:flex;flex-direction:column;align-items:center;padding:5px 0 3px;gap:2px;cursor:pointer;color:var(--text)}
 .cday.blank{cursor:default}
 .cn{width:34px;height:34px;border-radius:99px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;border:2px solid transparent;box-sizing:border-box}
 .cn.done{background:#3ddc97;border-color:#3ddc97;color:#06281a}
@@ -135,3 +139,16 @@ html[data-bg=emojis] body{background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .legend{display:flex;flex-wrap:wrap;gap:4px 12px;margin:4px 0;font-size:.78rem;color:var(--muted)}
 .lg{display:inline-flex;align-items:center;gap:5px}
 .cn.mini{width:14px;height:14px;border-width:2px}
+
+/* boutons rapides de l'accueil : icone au-dessus, texte identique */
+.btn.qbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:80px;padding:10px 6px}
+.qbtn .qi{font-size:1.7rem;line-height:1}
+.qbtn .ql{font-size:1.08rem;font-weight:700;line-height:1.15;text-align:center}
+/* legende repliable */
+.calfoot{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+.legtoggle{background:var(--card2);border:1px solid var(--line);color:var(--muted);border-radius:99px;padding:6px 14px;font-size:.85rem;font-weight:700;cursor:pointer}
+.legpanel{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.legpanel.open{max-height:320px}
+.leginner{margin-top:10px;padding:10px 12px;background:var(--card2);border:1px solid var(--line);border-radius:12px}
+.legend{margin:3px 0}
+.calnav .grow{flex:1}
