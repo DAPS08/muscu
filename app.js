@@ -47,6 +47,7 @@ function dayKey(s) { return String(s || '').toLowerCase().normalize('NFD').repla
 const DAYS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
 const DAY_NAMES = { lun: 'Lundi', mar: 'Mardi', mer: 'Mercredi', jeu: 'Jeudi', ven: 'Vendredi', sam: 'Samedi', dim: 'Dimanche' };
 const GROUPES = ['Pectoraux', 'Dos', 'Épaules', 'Biceps', 'Triceps', 'Quadriceps', 'Ischios', 'Fessiers', 'Mollets', 'Abdos', 'Autre'];
+const VERSION = '1.5', VERSION_DATE = '26/11/2026';
 const GROUP_COLORS = { 'Pectoraux': '#ef6f6c', 'Dos': '#5b9dff', 'Épaules': '#f5a35b', 'Biceps': '#3ddc97', 'Triceps': '#b18cff', 'Quadriceps': '#4fd1d9', 'Ischios': '#e4c44f', 'Fessiers': '#ff8fc2', 'Mollets': '#8fbf5b', 'Abdos': '#a8b3c7', 'Autre': '#7d8596' };
 function gcolor(g) { return GROUP_COLORS[g] || GROUP_COLORS['Autre']; }
 const THEMES = [['vert', 'Vert', '#3ddc97'], ['bleu', 'Bleu', '#5b9dff'], ['orange', 'Orange', '#ffa24d'], ['violet', 'Violet', '#b18cff'], ['rose', 'Rose', '#ff7eb6'], ['jaune', 'Jaune', '#f2cf4a']];
@@ -228,7 +229,7 @@ function emptyData() {
   return {
     config: { programmes: [], modeles: [], plan: [], exercices: [], objectifs: [], reglages: [] },
     history: { lastByModel: {}, lastAny: {}, best: {}, stagn: [], prs: [], n: {} },
-    sessions: [], measures: []
+    sessions: [], measures: [], activities: [], events: []
   };
 }
 const S = {
@@ -328,12 +329,18 @@ async function flush() {
     renderBadge();
   }
 }
+/* Ancien moteur sans activites/evenements : on garde ce qui a ete saisi sur ce telephone */
+function keepLocal(d) {
+  if (!d.activities) d.activities = (S.data && S.data.activities) || [];
+  if (!d.events) d.events = (S.data && S.data.events) || [];
+}
 async function refresh() {
   if (!S.cfg.url || !S.cfg.key) return;
   await flush();
   if (S.outbox.length) return;
   try {
     const j = await api({ action: 'bootstrap' });
+    keepLocal(j.data);
     S.data = j.data;
     LS.set('data', S.data);
     maybeSeedCatalog();
@@ -533,7 +540,7 @@ function renderSetup() {
         S.cfg = { url: u, key: k };
         try {
           const j = await api({ action: 'bootstrap' });
-          S.data = j.data; LS.set('data', S.data); LS.set('cfg', S.cfg); maybeSeedCatalog();
+          keepLocal(j.data); S.data = j.data; LS.set('data', S.data); LS.set('cfg', S.cfg); maybeSeedCatalog();
           S.syncErr = ''; S.view = 'home'; render(); toast('Connecté');
         } catch (e) {
           S.cfg = prev;
@@ -566,7 +573,7 @@ function suggestModel() {
 }
 function renderHome() {
   const root = h('div', { class: 'screen' });
-  root.append(topbar('Muscu', h('button', { class: 'btn small ghost', text: '⚙', onclick: function () { go('manage'); } })));
+  root.append(topbar('Outil de suivi', h('button', { class: 'btn small ghost', text: '⚙', onclick: function () { go('manage'); } })));
   const empty = !(S.data.config.modeles || []).length;
   if (S.active) {
     root.append(h('div', { class: 'card' },
@@ -584,12 +591,109 @@ function renderHome() {
     root.append(h('button', { class: 'go', onclick: openGo }, 'GO!', h('small', { text: 'Lancer une séance' })));
   }
   root.append(h('div', { class: 'grid2 quick' },
-    h('button', { class: 'btn ghost', text: '⚖ Pesée', onclick: openWeigh }),
+    h('button', { class: 'btn ghost', text: '⚖ Poids', onclick: openWeigh }),
     h('button', { class: 'btn ghost', text: '🏃 Autre sport', onclick: openSport }),
     h('button', { class: 'btn ghost', text: '📌 Événement', onclick: openEvent }),
     h('button', { class: 'btn ghost', text: '🕘 Séance passée', onclick: openPast })));
+  if (!empty) root.append(renderCalendar());
   root.append(renderKpis());
   return root;
+}
+
+/* ------------------------------------------------------------------ */
+/* Calendrier du mois                                                  */
+/* ------------------------------------------------------------------ */
+const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+const EV_COLORS = { 'Malade': '#e4c44f', 'Blessure': '#ff4fa3', 'Resto': '#b18cff', 'Mauvaise nuit': '#7f93b8', 'Voyage': '#4fd1d9', 'Autre': '#a8b3c7' };
+function dayOf(iso) { return todayStr(new Date(iso)); }
+function addDays(k, n) { const d = new Date(k + 'T12:00:00'); d.setDate(d.getDate() + n); return todayStr(d); }
+function calModel(y, m) {
+  const sess = {}, acts = {}, evs = {};
+  (S.data.sessions || []).forEach(function (x) { const k = dayOf(x.debut); (sess[k] = sess[k] || []).push(x); });
+  (S.data.activities || []).forEach(function (x) { const k = String(x.date).slice(0, 10); (acts[k] = acts[k] || []).push(x); });
+  (S.data.events || []).forEach(function (x) {
+    let k = String(x.debut).slice(0, 10); const end = String(x.fin || x.debut).slice(0, 10);
+    for (let i = 0; i < 90 && k <= end; i++) { (evs[k] = evs[k] || []).push(x); k = addDays(k, 1); }
+  });
+  const planned = {};
+  activeModels().forEach(function (mo) { const dk = dayKey(mo.jour); if (dk) (planned[dk] = planned[dk] || []).push(mo.nom); });
+  const first = new Date(y, m, 1), last = new Date(y, m + 1, 0);
+  const offset = (first.getDay() + 6) % 7;
+  const gridStart = addDays(todayStr(first), -offset);
+  const total = Math.ceil((offset + last.getDate()) / 7) * 7;
+  const today = todayStr();
+  const sessKeys = Object.keys(sess).sort();
+  const firstDay = sessKeys.length && sessKeys[0] < today ? sessKeys[0] : today;
+  const DK = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
+  const days = [];
+  for (let i = 0; i < total; i++) {
+    const k = addDays(gridStart, i), d = new Date(k + 'T12:00:00');
+    days.push({ k: k, num: d.getDate(), inMonth: d.getMonth() === m, sess: sess[k] || [], acts: acts[k] || [], evs: evs[k] || [], plan: k >= firstDay ? (planned[DK[d.getDay()]] || []) : [], cls: '', sportDot: false });
+  }
+  for (let w = 0; w < total; w += 7) {
+    const week = days.slice(w, w + 7), missed = [];
+    let extra = 0;
+    week.forEach(function (d) {
+      const hasS = d.sess.length > 0, hasA = d.acts.length > 0, plan = d.plan.length > 0;
+      if (hasS) { d.cls = 'done'; d.sportDot = hasA; if (!plan) extra++; }
+      else if (hasA && plan) d.cls = 'stripe';
+      else if (hasA) { d.cls = ''; d.sportDot = true; }
+      else if (plan) { if (d.k >= today) d.cls = 'ring'; else missed.push(d); }
+    });
+    missed.forEach(function (d, i) { d.cls = i < extra ? 'moved' : 'missed'; });
+  }
+  return days;
+}
+function openDay(d) {
+  const dt = new Date(d.k + 'T12:00:00');
+  const rows = [];
+  d.sess.forEach(function (x) { const mo = MOD(x.modele); rows.push(h('p', {}, h('b', { text: '🏋 ' + (mo ? mo.nom : 'Séance') }), ' · ' + hhmm(Date.parse(x.debut)) + (x.duree ? ' · ' + x.duree + ' min' : ''))); });
+  d.acts.forEach(function (x) { rows.push(h('p', {}, h('b', { text: '🏃 ' + x.sport }), x.duree !== '' && x.duree !== undefined && x.duree !== null ? ' · ' + x.duree + ' min' : '')); });
+  d.evs.forEach(function (x) { rows.push(h('p', {}, h('b', { text: '📌 ' + x.type }), x.note ? ' · ' + x.note : '')); });
+  if (!rows.length) rows.push(h('p', { class: 'muted', text: d.plan.length ? 'Prévu : ' + d.plan.join(', ') + ' · rien enregistré' : 'Rien d\'enregistré.' }));
+  else if (d.plan.length && !d.sess.length) rows.push(h('p', { class: 'small muted', text: 'Prévu : ' + d.plan.join(', ') }));
+  openModal(h('div', {}, h('h2', { text: dt.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) }),
+    h('div', {}, rows), h('div', { class: 'row' }, h('button', { class: 'btn primary grow', text: 'Fermer', onclick: closeModal }))));
+}
+function renderCalendar() {
+  const card = h('div', { class: 'card' });
+  const now = new Date();
+  S.cal = S.cal || { y: now.getFullYear(), m: now.getMonth() };
+  function draw() {
+    card.innerHTML = '';
+    const y = S.cal.y, m = S.cal.m, days = calModel(y, m), today = todayStr();
+    const move = function (n) { const d = new Date(y, m + n, 1); S.cal = { y: d.getFullYear(), m: d.getMonth() }; draw(); };
+    card.append(h('div', { class: 'calnav' },
+      h('button', { class: 'btn small ghost', text: '‹', onclick: function () { move(-1); } }),
+      h('h2', { class: 'grow', text: MONTHS[m] + ' ' + y }),
+      h('button', { class: 'btn small ghost', text: '›', onclick: function () { move(1); } })));
+    const grid = h('div', { class: 'cal' });
+    ['L', 'M', 'M', 'J', 'V', 'S', 'D'].forEach(function (l, i) { grid.append(h('span', { class: 'calh' + (i >= 5 ? ' we' : ''), text: l })); });
+    days.forEach(function (d) {
+      if (!d.inMonth) { grid.append(h('span', { class: 'cday blank' })); return; }
+      const evTypes = []; d.evs.forEach(function (e) { if (evTypes.indexOf(e.type) < 0) evTypes.push(e.type); });
+      const dots = h('span', { class: 'cdots' });
+      if (d.sportDot) dots.append(h('i', { class: 'sd' }));
+      evTypes.slice(0, 2).forEach(function (t) { dots.append(h('i', { style: 'background:' + (EV_COLORS[t] || EV_COLORS.Autre) })); });
+      grid.append(h('button', { class: 'cday', onclick: function () { openDay(d); } },
+        h('span', { class: 'cn ' + d.cls + (d.k === today ? ' today' : ''), text: String(d.num) }), dots));
+    });
+    card.append(grid);
+    const inM = days.filter(function (d) { return d.inMonth; });
+    const ns = inM.reduce(function (a, d) { return a + d.sess.length; }, 0), na = inM.reduce(function (a, d) { return a + d.acts.length; }, 0);
+    card.append(h('p', { class: 'small muted', style: 'margin:10px 0 6px', text: ns + ' séance' + (ns > 1 ? 's' : '') + (na ? ' · ' + na + ' autre' + (na > 1 ? 's' : '') + ' sport' + (na > 1 ? 's' : '') : '') + ' ce mois-ci' }));
+    const lg = h('div', { class: 'legend' });
+    [['done', 'Séance'], ['stripe', 'Autre sport à la place'], ['ring', 'Prévue'], ['moved', 'Déplacée'], ['missed', 'Manquée']].forEach(function (x) {
+      lg.append(h('span', { class: 'lg' }, h('i', { class: 'cn mini ' + x[0] }), x[1]));
+    });
+    lg.append(h('span', { class: 'lg' }, h('i', { class: 'sd' }), 'Autre sport'));
+    card.append(lg);
+    const evl = h('div', { class: 'legend' });
+    Object.keys(EV_COLORS).forEach(function (t) { evl.append(h('span', { class: 'lg' }, h('i', { class: 'edot', style: 'background:' + EV_COLORS[t] }), t)); });
+    card.append(evl);
+  }
+  draw();
+  return card;
 }
 
 function renderKpis() {
@@ -706,7 +810,7 @@ function startSession(m, past) {
   S.active = {
     id: id, modele: m ? m.id : '', nom: m ? m.nom : 'Séance libre', start: now,
     exercises: m ? planRows(m.id).map(function (p) { return p.exercice; }) : [],
-    sets: [], restEnd: null, restTotal: 0, past: !!past, pastDur: past ? past.dur : 0
+    sets: [], restStart: null, restTarget: 0, past: !!past, pastDur: past ? past.dur : 0
   };
   S.drafts = {};
   LS.set('active', S.active);
@@ -724,13 +828,13 @@ function renderSession() {
   root.append(h('div', { class: 'sessionbar' },
     h('div', { class: 'row' }, h('div', { class: 'sb-title', text: A.nom }), h('span', { id: 'badge', class: 'badge', onclick: function () { flush(); } }, '…')),
     h('div', { class: 'sb-times' },
-      h('span', { id: 't-global', text: '0:00' }),
-      h('span', { id: 't-rest', class: 'rest', title: 'Toucher pour arrêter le repos', onclick: function () { A.restEnd = null; persistActive(); tick(); } }))));
+      h('span', { id: 't-global', class: 'pill', text: '⏱ 0:00' }),
+      h('span', { id: 't-rest', class: 'pill rest', title: 'Toucher pour arrêter le repos', onclick: function () { A.restStart = null; persistActive(); tick(); } }))));
   const list = h('div', { id: 'cards' });
   A.exercises.forEach(function (id) { list.append(card(id)); });
   root.append(list);
   root.append(h('div', { class: 'row' },
-    h('button', { class: 'btn ghost grow', text: '+ Exercice', onclick: addExercisePicker }),
+    h('button', { class: 'btn ghost grow', text: 'Ajouter exos', onclick: addExercisePicker }),
     h('button', { class: 'btn ghost grow', text: 'Accueil', onclick: function () { go('home'); } })));
   root.append(h('div', { class: 'row', style: 'margin-top:12px' },
     h('button', { class: 'btn primary grow', text: 'Terminer la séance', onclick: openFinish })));
@@ -817,10 +921,17 @@ function card(exId) {
   if (sets.length && !isTest && !isDrop) sub.append(h('button', { class: 'btn small ghost', text: '↧ Drop', onclick: function () { startDrop(exId); } }));
   if (isDrop || isTest) sub.append(h('button', { class: 'btn small ghost', text: 'Annuler', onclick: function () { delete S.drafts[exId]; replaceCard(exId); } }));
   if (!isTest) sub.append(h('button', { class: 'btn small ghost', text: '1RM', onclick: function () { startTest(exId); } }));
+  if (!S.active.past) sub.append(h('button', { class: 'btn small ghost', text: '⏱ Repos', onclick: function () { startRest(exId); } }));
   el.append(sub);
   return el;
 }
 
+/* Chrono de repos manuel : demarre quand on le demande, monte, change de couleur au repos conseille */
+function startRest(exId) {
+  const A = S.active, ex = EX(exId) || {};
+  A.restStart = Date.now(); A.restTarget = num(ex.repos) || setting('repos_defaut', 90); A.vibrated = false;
+  persistActive(); tick();
+}
 function validateSet(exId) {
   const A = S.active, ex = EX(exId) || { type: 'charge' }, bw = ex.type === 'poids_du_corps', d = S.drafts[exId];
   if (!d) return;
@@ -829,8 +940,7 @@ function validateSet(exId) {
   const id = uid();
   const set = { id: id, ex: exId, numero: d.numero, type: d.type, groupe: d.groupe || id, ordre: d.ordre, charge: c, reps: Math.round(r), ts: A.past ? new Date(Date.parse(A.start) + (A.sets.length + 1) * 180000).toISOString() : new Date().toISOString(), note: '' };
   A.sets.push(set);
-  const secs = num(ex.repos) || setting('repos_defaut', 90);
-  if (!A.past) { A.restEnd = Date.now() + secs * 1000; A.restTotal = secs; A.vibrated = false; }
+  A.restStart = null;
   persistActive();
   enqueue({ action: 'addSets', sets: [setRow(set)] });
   delete S.drafts[exId];
@@ -845,7 +955,7 @@ function startDrop(exId) {
   const sets = A.sets.filter(function (s) { return s.ex === exId; });
   const l = sets[sets.length - 1];
   if (!l) return;
-  A.restEnd = null; persistActive();
+  A.restStart = null; persistActive();
   const pct = setting('drop_pct', 20) / 100;
   let target;
   if (ex.type === 'poids_du_corps') target = l.charge > 0 ? stepRound(ex, l.charge * (1 - pct)) : l.charge;
@@ -910,17 +1020,18 @@ function tick() {
   if (S.view !== 'session' || !S.active) return;
   const A = S.active, g = $('t-global'), r = $('t-rest');
   if (A.past) { if (g) g.textContent = '🕘 ' + fmtDateFr(A.start); if (r) r.textContent = ''; return; }
-  if (g) g.textContent = mmss(Date.now() - Date.parse(A.start));
+  if (g) g.textContent = '⏱ ' + mmss(Date.now() - Date.parse(A.start));
   if (r) {
-    if (A.restEnd) {
-      const rem = A.restEnd - Date.now();
-      r.textContent = (rem >= 0 ? 'Repos ' : 'Repos +') + mmss(Math.abs(rem));
-      r.classList.toggle('over', rem < 0);
-      if (rem < 0 && !A.vibrated) {
+    if (A.restStart && Date.now() - A.restStart > 30 * 60000) A.restStart = null;
+    if (A.restStart) {
+      const el = Date.now() - A.restStart, reached = A.restTarget && el >= A.restTarget * 1000;
+      r.textContent = 'Repos ' + mmss(el) + (A.restTarget ? ' / ' + mmss(A.restTarget * 1000) : '');
+      r.classList.toggle('reached', !!reached);
+      if (reached && !A.vibrated) {
         A.vibrated = true;
         if (setting('vibration', 0) && !document.hidden && navigator.vibrate) navigator.vibrate([200, 100, 200]);
       }
-    } else { r.textContent = ''; r.classList.remove('over'); }
+    } else { r.textContent = ''; r.classList.remove('reached'); }
   }
 }
 
@@ -1022,7 +1133,7 @@ function openWeigh() {
   const date = h('input', { type: 'date', value: todayStr() });
   const w = h('input', { type: 'text', inputmode: 'decimal', placeholder: 'ex. 78,4' });
   const mg = h('input', { type: 'text', inputmode: 'decimal', placeholder: 'optionnel' });
-  openModal(h('div', {}, h('h2', { text: 'Pesée' }),
+  openModal(h('div', {}, h('h2', { text: 'Poids' }),
     field('Date', date), field('Poids (kg)', w), field('Masse grasse (%)', mg),
     h('div', { class: 'row' },
       h('button', { class: 'btn ghost grow', text: 'Annuler', onclick: closeModal }),
@@ -1034,7 +1145,7 @@ function openWeigh() {
         S.data.measures.sort(function (a, b) { return Date.parse(a.date) - Date.parse(b.date); });
         LS.set('data', S.data);
         enqueue({ action: 'append', table: 'mesures', rows: [row] });
-        closeModal(); if (S.view === 'home') render(); toast('Pesée enregistrée');
+        closeModal(); if (S.view === 'home') render(); toast('Poids enregistré');
       } }))));
 }
 function openSport() {
@@ -1053,7 +1164,8 @@ function openSport() {
         if (!name) { toast('Sport requis'); return; }
         if (sports.indexOf(name) < 0) { sports.push(name); LS.set('sports', sports); }
         enqueue({ action: 'append', table: 'activites', rows: [{ id: uid(), date: date.value || todayStr(), sport: name, duree: num(dur.value) === null ? '' : num(dur.value), note: note.value.trim() }] });
-        closeModal(); toast('Activité enregistrée');
+        (S.data.activities = S.data.activities || []).push({ date: date.value || todayStr(), sport: name, duree: num(dur.value) === null ? '' : num(dur.value) }); LS.set('data', S.data);
+        closeModal(); toast('Activité enregistrée'); if (S.view === 'home') render();
       } }))));
 }
 function openEvent() {
@@ -1069,7 +1181,8 @@ function openEvent() {
       h('button', { class: 'btn primary grow', text: 'Enregistrer', onclick: function () {
         const a = d1.value || todayStr();
         enqueue({ action: 'append', table: 'journal', rows: [{ id: uid(), debut: a, fin: d2.value || a, type: type.value, note: note.value.trim() }] });
-        closeModal(); toast('Événement enregistré');
+        (S.data.events = S.data.events || []).push({ debut: a, fin: d2.value || a, type: type.value, note: note.value.trim() }); LS.set('data', S.data);
+        closeModal(); toast('Événement enregistré'); if (S.view === 'home') render();
       } }))));
 }
 
@@ -1123,7 +1236,7 @@ function tabExercises() {
   }
   search.addEventListener('input', fill); fill();
   wrap.append(h('div', { class: 'row', style: 'margin-bottom:10px' }, h('div', { class: 'grow' }, search),
-    h('button', { class: 'btn primary', text: '+ Exercice', onclick: function () { exerciseForm(null); } })), box);
+    h('button', { class: 'btn primary', text: 'Nouvel exo', onclick: function () { exerciseForm(null); } })), box);
   wrap.append(h('div', { style: 'margin-top:4px' },
     h('p', { class: 'small muted', text: (S.data.config.exercices || []).length + ' exercices · ★ = principal (objectif 1RM)' }),
     h('button', { class: 'btn small ghost', text: 'Compléter avec le catalogue de base', onclick: function () {
@@ -1245,7 +1358,7 @@ function planEditor(m) {
     if (!rows.length) list.append(h('p', { class: 'muted', text: 'Aucun exercice dans cette séance.' }));
     const box = h('div', {}, h('h2', { text: 'Plan : ' + m.nom }), list,
       h('div', { class: 'row' },
-        h('button', { class: 'btn ghost grow', text: '+ Exercice', onclick: function () { pickForPlan(m, draw); } }),
+        h('button', { class: 'btn ghost grow', text: 'Ajouter exos', onclick: function () { pickForPlan(m, draw); } }),
         h('button', { class: 'btn ghost grow', text: 'Renommer', onclick: function () { closeModal(); modelForm({ id: m.programme }, m); } })),
       h('div', { class: 'row' }, h('button', { class: 'btn primary grow', text: 'Enregistrer', onclick: function () { renumber(); saveConfig('plan'); closeModal(); toast('Plan enregistré'); } })));
     openModal(box);
@@ -1339,7 +1452,7 @@ function tabSettings() {
     card1.append(field(d[1], inputs[d[0]]));
   });
   const vib = h('input', { type: 'checkbox', checked: setting('vibration', 0) === 1 });
-  card1.append(field('Vibration en fin de repos (écran allumé)', vib, 'inline'));
+  card1.append(field('Vibration quand le repos conseillé est atteint (écran allumé)', vib, 'inline'));
   card1.append(h('button', { class: 'btn primary', text: 'Enregistrer', onclick: function () {
     const rows = [];
     defs.forEach(function (d) { const v = num(inputs[d[0]].value); if (v !== null) rows.push({ cle: d[0], valeur: v }); });
@@ -1371,7 +1484,27 @@ function tabSettings() {
       h('button', { class: 'btn ghost', text: 'Modifier', onclick: function () { go('setup'); } })));
   if (!(S.data.config.modeles || []).length) card2.append(h('div', { class: 'row', style: 'margin-top:10px' }, h('button', { class: 'btn ghost', text: 'Charger l\'exemple Push / Pull / Legs', onclick: seedExample })));
   wrap.append(card2);
+  wrap.append(h('div', { class: 'card' }, h('h2', { text: 'À propos' }),
+    h('p', { class: 'small muted', text: 'Outil de suivi · version ' + VERSION + ' · ' + VERSION_DATE }),
+    h('button', { class: 'btn ghost', text: '↻ Rechercher une mise à jour', onclick: updateApp })));
   return wrap;
+}
+
+/* Vide le cache de l'appli puis la recharge (les series en attente restent sur le telephone) */
+async function updateApp() {
+  toast('Recherche de mise à jour…');
+  try {
+    if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+      const rs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(rs.map(function (r) { return r.unregister(); }));
+    }
+    if (window.caches && caches.keys) {
+      const ks = await caches.keys();
+      await Promise.all(ks.map(function (k) { return caches.delete(k); }));
+    }
+    await Promise.all(['./', './index.html', './app.js', './style.css', './sw.js', './manifest.webmanifest'].map(function (u) { return fetch(u, { cache: 'reload' }).catch(function () { return null; }); }));
+  } catch (e) { /* on recharge quand meme */ }
+  location.reload();
 }
 
 async function shareApp() {
@@ -1412,6 +1545,6 @@ function init() {
   checkStale();
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(function () {});
 }
-window.__muscu = { seedCatalog: seedCatalog, openPast: openPast, applyTheme: applyTheme, applyBg: applyBg, shareApp: shareApp, exList: exList, S: S, render: render, flush: flush, refresh: refresh, startSession: startSession, validateSet: validateSet, startDrop: startDrop, startTest: startTest, finishSession: finishSession, openFinish: openFinish, openGo: openGo, seedExample: seedExample, tick: tick, checkStale: checkStale, getDraft: getDraft, activeModels: activeModels, suggestModel: suggestModel };
+window.__muscu = { seedCatalog: seedCatalog, openPast: openPast, applyTheme: applyTheme, calModel: calModel, renderCalendar: renderCalendar, startRest: startRest, updateApp: updateApp, applyBg: applyBg, shareApp: shareApp, exList: exList, S: S, render: render, flush: flush, refresh: refresh, startSession: startSession, validateSet: validateSet, startDrop: startDrop, startTest: startTest, finishSession: finishSession, openFinish: openFinish, openGo: openGo, seedExample: seedExample, tick: tick, checkStale: checkStale, getDraft: getDraft, activeModels: activeModels, suggestModel: suggestModel };
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
