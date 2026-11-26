@@ -1,7 +1,7 @@
 :root{
   --bg:#0f1115; --card:#181b22; --card2:#20242d; --line:#2b303b;
   --text:#eceff4; --muted:#9aa3b2; --accent:#3ddc97; --accent-ink:#0b0f14;
-  --accent-soft:rgba(61,220,151,.14); --accent-line:rgba(61,220,151,.45); --bar:#161b25;
+  --accent-soft:rgba(61,220,151,.14); --accent-glow:rgba(61,220,151,.28); --accent-line:rgba(61,220,151,.45); --bar:#161b25;
   --blue:#5b9dff; --warn:#ffb454; --bad:#ff6b6b; --r:14px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -28,7 +28,7 @@ p{margin:0 0 8px}
 .row.even{align-items:stretch}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
 .card h2{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
-.go{display:block;width:100%;border:0;border-radius:24px;padding:34px 10px;font-size:2.6rem;font-weight:900;letter-spacing:.06em;background:var(--accent);color:var(--accent-ink);cursor:pointer;margin-bottom:6px}
+.go{display:block;width:100%;border:0;border-radius:24px;padding:34px 10px;font-size:3.1rem;font-weight:900;letter-spacing:.06em;background:linear-gradient(180deg,#f0595e,#d93a40);color:#fff;cursor:pointer;margin-bottom:6px;box-shadow:0 8px 22px rgba(217,58,64,.35)}
 .go small{display:block;font-size:.9rem;font-weight:600;letter-spacing:0;margin-top:4px;opacity:.8}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .tile{background:var(--card2);border-radius:12px;padding:10px 12px}
@@ -90,8 +90,18 @@ textarea{min-height:70px}
 .swatch.on{outline:3px solid var(--text);outline-offset:1px}
 
 /* fonds (choix dans Reglages > Apparence) */
-html[data-bg=points] body,html:not([data-bg]) body{background-image:radial-gradient(rgba(255,255,255,.10) 1.3px,transparent 1.6px);background-size:18px 18px}
+html[data-bg=points] body,{}
 html[data-bg=grille] body{background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:24px 24px}
 html[data-bg=diagonales] body{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.035) 0 2px,transparent 2px 14px)}
-html[data-bg=degrade] body{background-image:radial-gradient(circle at 15% 0%,var(--accent-soft),transparent 55%),radial-gradient(circle at 100% 100%,rgba(255,255,255,.05),transparent 50%);background-attachment:fixed}
+html[data-bg=degrade] body,html:not([data-bg]) body{background-image:radial-gradient(rgba(255,255,255,.13) 1.3px,transparent 1.6px),linear-gradient(180deg,var(--accent-glow) 0,rgba(0,0,0,0) 1300px);background-size:18px 18px,100% 1300px;background-repeat:repeat,no-repeat;background-position:0 0,0 0}
 html[data-bg=emojis] body{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='110' height='110'%3E%3Ctext x='8' y='36' font-size='22' opacity='.13'%3E💪%3C/text%3E%3Ctext x='62' y='96' font-size='22' opacity='.13'%3E🏋️%3C/text%3E%3C/svg%3E");background-size:110px 110px}
+
+/* exercices : en-tete separe, lignes espacees avec liseré léger */
+.gcard.open .ghead{background:var(--card2);background:color-mix(in srgb,var(--gc) 16%,var(--card));border-bottom:2px solid var(--gc)}
+.gbody{border-top:0;padding:12px}
+.list.exl{display:flex;flex-direction:column;gap:7px}
+.list.exl>.item.exi{border:1px solid var(--line);border-left:4px solid var(--gc);border-left-color:color-mix(in srgb,var(--gc) 55%,transparent);border-radius:10px;background:var(--card2);padding:11px 12px}
+.list.exl>.item.exi:last-child{border-bottom:1px solid var(--line)}
+.exi .exn{font-weight:650}
+.exi .eq{color:var(--muted);font-size:.9em}
+.list.exl>.gtitle{margin:10px 0 0}

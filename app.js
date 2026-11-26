@@ -57,9 +57,16 @@ function applyTheme(id) {
   st.setProperty('--accent', hex);
   st.setProperty('--accent-soft', 'rgba(' + r + ',' + g + ',' + b + ',.14)');
   st.setProperty('--accent-line', 'rgba(' + r + ',' + g + ',' + b + ',.45)');
+  st.setProperty('--accent-glow', 'rgba(' + r + ',' + g + ',' + b + ',.28)');
 }
-const BGS = [['points', 'Points'], ['grille', 'Grille'], ['diagonales', 'Diagonales'], ['degrade', 'Dégradé'], ['emojis', 'Emojis'], ['uni', 'Uni']];
-function applyBg(id) { document.documentElement.setAttribute('data-bg', BGS.some(function (b) { return b[0] === id; }) ? id : 'points'); }
+const BGS = [['degrade', 'Dégradé + points'], ['points', 'Points'], ['grille', 'Grille'], ['diagonales', 'Diagonales'], ['emojis', 'Emojis'], ['uni', 'Uni']];
+function applyBg(id) { document.documentElement.setAttribute('data-bg', BGS.some(function (b) { return b[0] === id; }) ? id : 'degrade'); }
+/* Nom d'exercice : le mouvement, puis le materiel entre parentheses en petit */
+function exLabel(nom) {
+  const m = /^(.*?)\s*\(([^()]*)\)\s*$/.exec(String(nom || ''));
+  if (!m) return [String(nom || '')];
+  return [h('span', { class: 'exn', text: m[1] }), ' ', h('span', { class: 'eq', text: '(' + m[2] + ')' })];
+}
 function fmtDateFr(iso) { const d = new Date(iso); return p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + '/' + d.getFullYear(); }
 const EVENTS = ['Malade', 'Blessure', 'Resto', 'Mauvaise nuit', 'Voyage', 'Autre'];
 
@@ -875,14 +882,14 @@ function pickerGroups(list, rows, onPick) {
   rows.forEach(function (e) {
     const g = e.groupe || 'Autre';
     if (g !== last) { last = g; list.append(h('div', { class: 'gtitle', style: '--gc:' + gcolor(g) }, h('span', { class: 'gdot' }), h('span', { text: g }))); }
-    list.append(h('div', { class: 'item', style: '--gc:' + gcolor(g), onclick: function () { onPick(e); } },
-      h('span', { text: e.nom }), e.principal === 'oui' ? h('span', { class: 'small', style: 'color:var(--warn)', text: '★' }) : null));
+    list.append(h('div', { class: 'item exi', style: '--gc:' + gcolor(g), onclick: function () { onPick(e); } },
+      h('span', {}, exLabel(e.nom)), e.principal === 'oui' ? h('span', { class: 'small', style: 'color:var(--warn)', text: '★' }) : null));
   });
 }
 function addExercisePicker() {
   const A = S.active;
   const search = h('input', { type: 'text', placeholder: 'Rechercher un exercice' });
-  const list = h('div', { class: 'list' });
+  const list = h('div', { class: 'list exl' });
   function fill() {
     list.innerHTML = '';
     const q = norm(search.value);
@@ -1098,14 +1105,14 @@ function tabExercises() {
     GROUPES.concat(Object.keys(by).filter(function (g) { return GROUPES.indexOf(g) < 0; })).forEach(function (g) {
       if (!by[g]) return;
       const open = q ? true : !!openG[g];
-      const gc = h('div', { class: 'gcard', style: '--gc:' + gcolor(g) });
+      const gc = h('div', { class: 'gcard' + (open ? ' open' : ''), style: '--gc:' + gcolor(g) });
       gc.append(h('button', { class: 'ghead', onclick: function () { openG[g] = !openG[g]; LS.set('openGroups', openG); fill(); } },
         h('span', { class: 'gdot' }), h('span', { class: 'gname', text: g }), h('span', { class: 'gcount', text: String(by[g].length) }), h('span', { class: 'gchev', text: open ? '▾' : '▸' })));
       if (open) {
-        const body = h('div', { class: 'list gbody' });
+        const body = h('div', { class: 'list exl gbody' });
         by[g].forEach(function (e) {
-          body.append(h('div', { class: 'item', onclick: function () { exerciseForm(e); } },
-            h('span', {}, e.nom, e.principal === 'oui' ? h('span', { style: 'color:var(--warn)', text: ' ★' }) : null),
+          body.append(h('div', { class: 'item exi', onclick: function () { exerciseForm(e); } },
+            h('span', {}, exLabel(e.nom), e.principal === 'oui' ? h('span', { style: 'color:var(--warn)', text: ' ★' }) : null),
             h('span', { class: 'small muted', text: e.type === 'poids_du_corps' ? 'PdC' : '' })));
         });
         gc.append(body);
@@ -1255,7 +1262,7 @@ function planEditor(m) {
 }
 function pickForPlan(m, back) {
   const search = h('input', { type: 'text', placeholder: 'Rechercher un exercice' });
-  const list = h('div', { class: 'list' });
+  const list = h('div', { class: 'list exl' });
   function fill() {
     list.innerHTML = '';
     const q = norm(search.value), used = planRows(m.id).map(function (p) { return p.exercice; });
@@ -1346,7 +1353,7 @@ function tabSettings() {
   THEMES.forEach(function (t) {
     sw.append(h('button', { class: 'swatch' + (curTheme === t[0] ? ' on' : ''), style: 'background:' + t[2], title: t[1], 'aria-label': t[1], onclick: function () { LS.set('theme', t[0]); applyTheme(t[0]); render(); } }));
   });
-  const curBg = LS.get('bg', 'points');
+  const curBg = LS.get('bg', 'degrade');
   const bgs = h('div', { class: 'chips' });
   BGS.forEach(function (b) {
     bgs.append(h('button', { class: 'btn small ' + (curBg === b[0] ? 'primary' : 'ghost'), text: b[1], onclick: function () { LS.set('bg', b[0]); applyBg(b[0]); render(); } }));
@@ -1396,7 +1403,7 @@ function seedExample() {
 /* ================================================================== */
 function init() {
   applyTheme(LS.get('theme', 'vert'));
-  applyBg(LS.get('bg', 'points'));
+  applyBg(LS.get('bg', 'degrade'));
   render();
   window.addEventListener('online', function () { flush().then(refresh); });
   document.addEventListener('visibilitychange', function () { if (!document.hidden) { flush(); tick(); } });
