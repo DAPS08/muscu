@@ -49,6 +49,130 @@ const DAY_NAMES = { lun: 'Lundi', mar: 'Mardi', mer: 'Mercredi', jeu: 'Jeudi', v
 const GROUPES = ['Pectoraux', 'Dos', 'Épaules', 'Biceps', 'Triceps', 'Quadriceps', 'Ischios', 'Fessiers', 'Mollets', 'Abdos', 'Autre'];
 const EVENTS = ['Malade', 'Blessure', 'Resto', 'Mauvaise nuit', 'Voyage', 'Autre'];
 
+/* Catalogue de base : charge automatiquement une fois, sans doublons. [id, nom, groupe, type, principal, repos (s), pas (kg)] */
+const CATALOG = [
+  ['dc-barre', 'DC (Barre libre)', 'Pectoraux', 'charge', 'oui', 150, 2.5],
+  ['dc-halteres', 'DC (Haltères)', 'Pectoraux', 'charge', 'non', 120, 2],
+  ['dc-smith-machine', 'DC (Smith machine)', 'Pectoraux', 'charge', 'non', 120, 2.5],
+  ['dc-machine', 'DC (Machine convergente)', 'Pectoraux', 'charge', 'non', 90, 5],
+  ['dc-incline-barre', 'DC incliné (Barre libre)', 'Pectoraux', 'charge', 'non', 120, 2.5],
+  ['dc-incline-halteres', 'DC incliné (Haltères)', 'Pectoraux', 'charge', 'non', 120, 2],
+  ['dc-incline-smith-machine', 'DC incliné (Smith machine)', 'Pectoraux', 'charge', 'non', 120, 2.5],
+  ['dc-incline-machine', 'DC incliné (Machine)', 'Pectoraux', 'charge', 'non', 90, 5],
+  ['dc-decline', 'DC décliné (Barre libre)', 'Pectoraux', 'charge', 'non', 120, 2.5],
+  ['dc-decline-halteres', 'DC décliné (Haltères)', 'Pectoraux', 'charge', 'non', 120, 2],
+  ['dc-decline-smith-machine', 'DC décliné (Smith machine)', 'Pectoraux', 'charge', 'non', 120, 2.5],
+  ['ecarte-halteres', 'Écarté (Haltères)', 'Pectoraux', 'charge', 'non', 75, 1],
+  ['ecarte-incline-halteres', 'Écarté incliné (Haltères)', 'Pectoraux', 'charge', 'non', 75, 1],
+  ['ecarte-poulie', 'Écarté (Poulie vis-à-vis)', 'Pectoraux', 'charge', 'non', 75, 2.5],
+  ['pec-deck', 'Pec deck (Machine)', 'Pectoraux', 'charge', 'non', 75, 5],
+  ['pompes', 'Pompes (Poids du corps)', 'Pectoraux', 'poids_du_corps', 'non', 75, 2.5],
+  ['pompes-lestees-poids-du-corps', 'Pompes lestées (Poids du corps)', 'Pectoraux', 'poids_du_corps', 'non', 90, 2.5],
+  ['tractions', 'Tractions (Poids du corps)', 'Dos', 'poids_du_corps', 'non', 120, 2.5],
+  ['tractions-neutre', 'Tractions prise neutre (Poids du corps)', 'Dos', 'poids_du_corps', 'non', 120, 2.5],
+  ['tractions-assistees-machine', 'Tractions assistées (Machine)', 'Dos', 'charge', 'non', 90, 5],
+  ['tirage-vertical', 'Tirage vertical (Poulie)', 'Dos', 'charge', 'non', 90, 5],
+  ['tirage-vertical-serre', 'Tirage vertical prise serrée (Poulie)', 'Dos', 'charge', 'non', 90, 5],
+  ['tirage-vertical-prise-neutre-poulie', 'Tirage vertical prise neutre (Poulie)', 'Dos', 'charge', 'non', 90, 5],
+  ['tirage-vertical-machine', 'Tirage vertical (Machine)', 'Dos', 'charge', 'non', 90, 5],
+  ['rowing-barre', 'Rowing (Barre libre)', 'Dos', 'charge', 'oui', 120, 2.5],
+  ['rowing-smith-machine', 'Rowing (Smith machine)', 'Dos', 'charge', 'non', 120, 2.5],
+  ['rowing-halteres', 'Rowing (Haltères)', 'Dos', 'charge', 'non', 90, 2],
+  ['rowing-haltere', 'Rowing unilatéral (Haltère)', 'Dos', 'charge', 'non', 90, 2],
+  ['rowing-buste-appuye-halteres', 'Rowing buste appuyé (Haltères)', 'Dos', 'charge', 'non', 90, 2],
+  ['rowing-poulie', 'Rowing (Poulie basse)', 'Dos', 'charge', 'non', 90, 5],
+  ['rowing-machine', 'Rowing (Machine)', 'Dos', 'charge', 'non', 90, 5],
+  ['rowing-t-bar', 'Rowing T-bar (Machine)', 'Dos', 'charge', 'non', 90, 2.5],
+  ['souleve-de-terre', 'Soulevé de terre (Barre libre)', 'Dos', 'charge', 'oui', 180, 2.5],
+  ['pull-over-poulie', 'Pull-over (Poulie)', 'Dos', 'charge', 'non', 75, 2.5],
+  ['pull-over-haltere', 'Pull-over (Haltère)', 'Dos', 'charge', 'non', 75, 1],
+  ['shrugs', 'Shrugs (Barre libre)', 'Dos', 'charge', 'non', 75, 2.5],
+  ['shrugs-halteres', 'Shrugs (Haltères)', 'Dos', 'charge', 'non', 75, 2],
+  ['shrugs-smith-machine', 'Shrugs (Smith machine)', 'Dos', 'charge', 'non', 75, 2.5],
+  ['lombaires', 'Extensions lombaires (Banc à lombaires)', 'Dos', 'poids_du_corps', 'non', 75, 2.5],
+  ['dev-militaire', 'Militaire (Barre libre)', 'Épaules', 'charge', 'oui', 150, 2.5],
+  ['dev-epaules-halteres', 'Militaire (Haltères)', 'Épaules', 'charge', 'non', 120, 2],
+  ['militaire-smith-machine', 'Militaire (Smith machine)', 'Épaules', 'charge', 'non', 120, 2.5],
+  ['dev-epaules-machine', 'Militaire (Machine)', 'Épaules', 'charge', 'non', 90, 5],
+  ['arnold-press', 'Arnold press (Haltères)', 'Épaules', 'charge', 'non', 90, 2],
+  ['elevations-laterales', 'Élévations latérales (Haltères)', 'Épaules', 'charge', 'non', 60, 1],
+  ['elevations-laterales-poulie', 'Élévations latérales (Poulie)', 'Épaules', 'charge', 'non', 60, 2.5],
+  ['elevations-laterales-machine', 'Élévations latérales (Machine)', 'Épaules', 'charge', 'non', 60, 5],
+  ['elevations-frontales', 'Élévations frontales (Haltères)', 'Épaules', 'charge', 'non', 60, 1],
+  ['elevations-frontales-barre-libre', 'Élévations frontales (Barre libre)', 'Épaules', 'charge', 'non', 60, 2.5],
+  ['elevations-frontales-poulie', 'Élévations frontales (Poulie)', 'Épaules', 'charge', 'non', 60, 2.5],
+  ['oiseau-halteres', 'Oiseau (Haltères)', 'Épaules', 'charge', 'non', 60, 1],
+  ['oiseau-machine', 'Oiseau (Machine)', 'Épaules', 'charge', 'non', 60, 5],
+  ['oiseau-poulie-vis-a-vis', 'Oiseau (Poulie vis-à-vis)', 'Épaules', 'charge', 'non', 60, 2.5],
+  ['face-pull', 'Face pull (Poulie)', 'Épaules', 'charge', 'non', 60, 2.5],
+  ['tirage-menton-barre-libre', 'Tirage menton (Barre libre)', 'Épaules', 'charge', 'non', 75, 2.5],
+  ['curl-barre', 'Curl (Barre libre)', 'Biceps', 'charge', 'non', 75, 2.5],
+  ['curl-barre-ez', 'Curl (Barre EZ)', 'Biceps', 'charge', 'non', 75, 2.5],
+  ['curl-halteres', 'Curl (Haltères)', 'Biceps', 'charge', 'non', 60, 1],
+  ['curl-marteau', 'Curl marteau (Haltères)', 'Biceps', 'charge', 'non', 60, 1],
+  ['curl-marteau-poulie-corde', 'Curl marteau (Poulie corde)', 'Biceps', 'charge', 'non', 60, 2.5],
+  ['curl-pupitre', 'Curl pupitre (Barre EZ)', 'Biceps', 'charge', 'non', 60, 2.5],
+  ['curl-pupitre-machine', 'Curl pupitre (Machine)', 'Biceps', 'charge', 'non', 60, 5],
+  ['curl-pupitre-haltere', 'Curl pupitre (Haltère)', 'Biceps', 'charge', 'non', 60, 1],
+  ['curl-incline', 'Curl incliné (Haltères)', 'Biceps', 'charge', 'non', 60, 1],
+  ['curl-poulie-basse', 'Curl (Poulie basse)', 'Biceps', 'charge', 'non', 60, 2.5],
+  ['curl-concentre', 'Curl concentré (Haltère)', 'Biceps', 'charge', 'non', 60, 1],
+  ['dips', 'Dips (Poids du corps)', 'Triceps', 'poids_du_corps', 'non', 120, 2.5],
+  ['dips-machine', 'Dips (Machine)', 'Triceps', 'charge', 'non', 90, 5],
+  ['extension-triceps-poulie', 'Extension triceps (Poulie barre)', 'Triceps', 'charge', 'non', 60, 2.5],
+  ['extension-triceps-corde', 'Extension triceps (Poulie corde)', 'Triceps', 'charge', 'non', 60, 2.5],
+  ['extension-triceps-machine', 'Extension triceps (Machine)', 'Triceps', 'charge', 'non', 60, 5],
+  ['barre-au-front', 'Barre au front (Barre EZ)', 'Triceps', 'charge', 'non', 90, 2.5],
+  ['barre-au-front-halteres', 'Barre au front (Haltères)', 'Triceps', 'charge', 'non', 90, 1],
+  ['extension-nuque', 'Extension nuque (Haltère)', 'Triceps', 'charge', 'non', 60, 1],
+  ['extension-nuque-poulie-corde', 'Extension nuque (Poulie corde)', 'Triceps', 'charge', 'non', 60, 2.5],
+  ['kickback-triceps', 'Kickback triceps (Haltère)', 'Triceps', 'charge', 'non', 60, 1],
+  ['kickback-triceps-poulie', 'Kickback triceps (Poulie)', 'Triceps', 'charge', 'non', 60, 2.5],
+  ['dc-serre', 'DC prise serrée (Barre libre)', 'Triceps', 'charge', 'non', 120, 2.5],
+  ['dc-prise-serree-smith-machine', 'DC prise serrée (Smith machine)', 'Triceps', 'charge', 'non', 120, 2.5],
+  ['squat', 'Squat (Barre libre)', 'Quadriceps', 'charge', 'oui', 180, 2.5],
+  ['squat-smith-machine', 'Squat (Smith machine)', 'Quadriceps', 'charge', 'non', 150, 2.5],
+  ['squat-avant', 'Squat avant (Barre libre)', 'Quadriceps', 'charge', 'non', 150, 2.5],
+  ['presse', 'Presse à cuisses (Machine)', 'Quadriceps', 'charge', 'oui', 150, 5],
+  ['hack-squat', 'Hack squat (Machine)', 'Quadriceps', 'charge', 'non', 120, 5],
+  ['leg-extension', 'Leg extension (Machine)', 'Quadriceps', 'charge', 'non', 75, 5],
+  ['fentes-marchees', 'Fentes marchées (Haltères)', 'Quadriceps', 'charge', 'non', 90, 2],
+  ['fentes-barre-libre', 'Fentes (Barre libre)', 'Quadriceps', 'charge', 'non', 90, 2.5],
+  ['fentes-smith-machine', 'Fentes (Smith machine)', 'Quadriceps', 'charge', 'non', 90, 2.5],
+  ['fentes-bulgares', 'Fentes bulgares (Haltères)', 'Quadriceps', 'charge', 'non', 90, 2],
+  ['fentes-bulgares-smith-machine', 'Fentes bulgares (Smith machine)', 'Quadriceps', 'charge', 'non', 90, 2.5],
+  ['goblet-squat', 'Goblet squat (Haltère)', 'Quadriceps', 'charge', 'non', 90, 2],
+  ['step-up-halteres', 'Step-up (Haltères)', 'Quadriceps', 'charge', 'non', 90, 2],
+  ['souleve-roumain', 'Soulevé de terre roumain (Barre libre)', 'Ischios', 'charge', 'non', 120, 2.5],
+  ['souleve-de-terre-roumain-halteres', 'Soulevé de terre roumain (Haltères)', 'Ischios', 'charge', 'non', 120, 2],
+  ['souleve-de-terre-roumain-smith-machine', 'Soulevé de terre roumain (Smith machine)', 'Ischios', 'charge', 'non', 120, 2.5],
+  ['leg-curl', 'Leg curl assis (Machine)', 'Ischios', 'charge', 'non', 75, 5],
+  ['leg-curl-allonge', 'Leg curl allongé (Machine)', 'Ischios', 'charge', 'non', 75, 5],
+  ['good-morning', 'Good morning (Barre libre)', 'Ischios', 'charge', 'non', 90, 2.5],
+  ['hip-thrust', 'Hip thrust (Barre libre)', 'Fessiers', 'charge', 'non', 120, 5],
+  ['hip-thrust-smith-machine', 'Hip thrust (Smith machine)', 'Fessiers', 'charge', 'non', 120, 5],
+  ['hip-thrust-machine', 'Hip thrust (Machine)', 'Fessiers', 'charge', 'non', 120, 5],
+  ['abduction-machine', 'Abduction (Machine)', 'Fessiers', 'charge', 'non', 60, 5],
+  ['adduction-machine', 'Adduction (Machine)', 'Fessiers', 'charge', 'non', 60, 5],
+  ['kickback-poulie', 'Kickback fessiers (Poulie)', 'Fessiers', 'charge', 'non', 60, 2.5],
+  ['kickback-fessiers-machine', 'Kickback fessiers (Machine)', 'Fessiers', 'charge', 'non', 60, 5],
+  ['mollets-debout', 'Mollets debout (Machine)', 'Mollets', 'charge', 'non', 60, 5],
+  ['mollets-debout-smith-machine', 'Mollets debout (Smith machine)', 'Mollets', 'charge', 'non', 60, 5],
+  ['mollets-assis', 'Mollets assis (Machine)', 'Mollets', 'charge', 'non', 60, 5],
+  ['mollets-presse', 'Mollets (Presse)', 'Mollets', 'charge', 'non', 60, 5],
+  ['mollets-unilateral-haltere', 'Mollets unilatéral (Haltère)', 'Mollets', 'charge', 'non', 60, 2],
+  ['crunch', 'Crunch (Poids du corps)', 'Abdos', 'poids_du_corps', 'non', 60, 2.5],
+  ['crunch-poulie', 'Crunch (Poulie)', 'Abdos', 'charge', 'non', 60, 2.5],
+  ['crunch-machine', 'Crunch (Machine)', 'Abdos', 'charge', 'non', 60, 5],
+  ['crunch-decline-banc-decline', 'Crunch décliné (Banc décliné)', 'Abdos', 'poids_du_corps', 'non', 60, 2.5],
+  ['releve-jambes', 'Relevé de jambes (Chaise romaine)', 'Abdos', 'poids_du_corps', 'non', 60, 2.5],
+  ['roue-abdominale', 'Roue abdominale (Poids du corps)', 'Abdos', 'poids_du_corps', 'non', 60, 2.5]
+];
+
+/* Anciens identifiants (catalogue v1), pour la mise a jour automatique */
+const OLD_CATALOG_IDS = ['dc-barre', 'dc-halteres', 'dc-incline-barre', 'dc-incline-halteres', 'dc-decline', 'dc-machine', 'ecarte-halteres', 'ecarte-poulie', 'pec-deck', 'pompes', 'tractions', 'tractions-neutre', 'tirage-vertical', 'tirage-vertical-serre', 'rowing-barre', 'rowing-haltere', 'rowing-poulie', 'rowing-machine', 'rowing-t-bar', 'souleve-de-terre', 'pull-over-poulie', 'shrugs', 'lombaires', 'dev-militaire', 'dev-epaules-halteres', 'dev-epaules-machine', 'arnold-press', 'elevations-laterales', 'elevations-laterales-poulie', 'elevations-frontales', 'oiseau-halteres', 'oiseau-machine', 'face-pull', 'curl-barre', 'curl-barre-ez', 'curl-halteres', 'curl-marteau', 'curl-pupitre', 'curl-incline', 'curl-poulie-basse', 'curl-concentre', 'dips', 'extension-triceps-poulie', 'extension-triceps-corde', 'barre-au-front', 'extension-nuque', 'kickback-triceps', 'dc-serre', 'squat', 'squat-avant', 'presse', 'hack-squat', 'leg-extension', 'fentes-marchees', 'fentes-bulgares', 'goblet-squat', 'souleve-roumain', 'leg-curl', 'leg-curl-allonge', 'good-morning', 'hip-thrust', 'abduction-machine', 'kickback-poulie', 'mollets-debout', 'mollets-assis', 'mollets-presse', 'crunch', 'crunch-poulie', 'releve-jambes', 'roue-abdominale'];
+const CATALOG_VER = 2;
+
 function h(tag, a) {
   const e = document.createElement(tag);
   let val;
@@ -191,6 +315,7 @@ async function refresh() {
     const j = await api({ action: 'bootstrap' });
     S.data = j.data;
     LS.set('data', S.data);
+    maybeSeedCatalog();
     S.syncErr = '';
     if (S.view === 'home') render();
   } catch (e) {
@@ -198,6 +323,48 @@ async function refresh() {
   }
   renderBadge();
 }
+/* Catalogue : ajoute les exercices de base absents (par id), sans toucher aux autres */
+function seedCatalog() {
+  const C = S.data.config, have = {};
+  (C.exercices || []).forEach(function (e) { have[e.id] = true; });
+  const add = CATALOG.filter(function (x) { return !have[x[0]]; }).map(function (x) {
+    return { id: x[0], nom: x[1], groupe: x[2], type: x[3], principal: x[4], repos: x[5], pas: x[6], pile: '' };
+  });
+  if (!add.length) return 0;
+  C.exercices = (C.exercices || []).concat(add);
+  saveConfig('exercices');
+  return add.length;
+}
+/* Premiere connexion : catalogue vide -> charge une fois. Ancien catalogue v1 -> renomme, retire les anciens inutilises, complete. */
+function maybeSeedCatalog() {
+  if (LS.get('catalogVer', 0) >= CATALOG_VER) return;
+  const C = S.data.config, ex = C.exercices || [];
+  if (!ex.length) {
+    if (LS.get('catalogSeeded', false)) { LS.set('catalogVer', CATALOG_VER); return; }
+    if (seedCatalog()) { LS.set('catalogSeeded', true); LS.set('catalogVer', CATALOG_VER); toast('Catalogue d\'exercices ajouté'); }
+    return;
+  }
+  if (!ex.some(function (e) { return OLD_CATALOG_IDS.indexOf(e.id) >= 0; })) { LS.set('catalogVer', CATALOG_VER); return; }
+  const byId = {};
+  CATALOG.forEach(function (x) { byId[x[0]] = x; });
+  const used = JSON.stringify([C.plan || [], C.objectifs || [], S.data.history || {}]);
+  C.exercices = ex.filter(function (e) {
+    return !(OLD_CATALOG_IDS.indexOf(e.id) >= 0 && !byId[e.id] && used.indexOf('"' + e.id + '"') < 0);
+  });
+  C.exercices.forEach(function (e) { if (byId[e.id] && OLD_CATALOG_IDS.indexOf(e.id) >= 0) { e.nom = byId[e.id][1]; e.groupe = byId[e.id][2]; } });
+  seedCatalog();
+  saveConfig('exercices');
+  LS.set('catalogSeeded', true); LS.set('catalogVer', CATALOG_VER);
+  toast('Catalogue d\'exercices mis à jour');
+}
+/* Exercices tries par groupe musculaire puis par nom */
+function exList() {
+  return (S.data.config.exercices || []).slice().sort(function (a, b) {
+    const ga = GROUPES.indexOf(a.groupe), gb = GROUPES.indexOf(b.groupe);
+    return (ga < 0 ? 99 : ga) - (gb < 0 ? 99 : gb) || String(a.nom).localeCompare(String(b.nom), 'fr');
+  });
+}
+
 function saveConfig(table) {
   LS.set('data', S.data);
   enqueue({ action: 'saveTable', table: table, rows: S.data.config[table] });
@@ -344,7 +511,7 @@ function renderSetup() {
         S.cfg = { url: u, key: k };
         try {
           const j = await api({ action: 'bootstrap' });
-          S.data = j.data; LS.set('data', S.data); LS.set('cfg', S.cfg);
+          S.data = j.data; LS.set('data', S.data); LS.set('cfg', S.cfg); maybeSeedCatalog();
           S.syncErr = ''; S.view = 'home'; render(); toast('Connecté');
         } catch (e) {
           S.cfg = prev;
@@ -378,7 +545,7 @@ function suggestModel() {
 function renderHome() {
   const root = h('div', { class: 'screen' });
   root.append(topbar('Muscu', h('button', { class: 'btn small ghost', text: '⚙', onclick: function () { go('manage'); } })));
-  const empty = !(S.data.config.exercices || []).length && !(S.data.config.modeles || []).length;
+  const empty = !(S.data.config.modeles || []).length;
   if (S.active) {
     root.append(h('div', { class: 'card' },
       h('h2', { text: 'Séance en cours' }),
@@ -387,10 +554,10 @@ function renderHome() {
   } else if (empty) {
     root.append(h('div', { class: 'card' },
       h('h2', { text: 'Bienvenue' }),
-      h('p', { class: 'muted', text: 'Aucun exercice ni séance pour l\'instant. Charge un exemple (Push / Pull / Legs) pour démarrer vite, ou crée tout toi-même.' }),
+      h('p', { class: 'muted', text: 'Ton catalogue d\'exercices est prêt. Crée ta première séance, ou charge l\'exemple Push / Pull / Legs pour démarrer vite et l\'adapter ensuite.' }),
       h('div', { class: 'row' },
         h('button', { class: 'btn primary', text: 'Charger l\'exemple', onclick: seedExample }),
-        h('button', { class: 'btn ghost', text: 'Tout créer', onclick: function () { go('manage'); } }))));
+        h('button', { class: 'btn ghost', text: 'Créer mes séances', onclick: function () { S.tab = 'seances'; go('manage'); } }))));
   } else {
     root.append(h('button', { class: 'go', onclick: openGo }, 'GO!', h('small', { text: 'Lancer une séance' })));
   }
@@ -671,7 +838,7 @@ function addExercisePicker() {
   function fill() {
     list.innerHTML = '';
     const q = norm(search.value);
-    (S.data.config.exercices || []).filter(function (e) { return A.exercises.indexOf(e.id) < 0 && (!q || norm(e.nom).indexOf(q) >= 0); })
+    exList().filter(function (e) { return A.exercises.indexOf(e.id) < 0 && (!q || norm(e.nom).indexOf(q) >= 0); })
       .forEach(function (e) {
         list.append(h('div', { class: 'item', onclick: function () {
           A.exercises.push(e.id); persistActive(); closeModal();
@@ -861,18 +1028,27 @@ function tabExercises() {
   function fill() {
     list.innerHTML = '';
     const q = norm(search.value);
-    const rows = (S.data.config.exercices || []).filter(function (e) { return !q || norm(e.nom).indexOf(q) >= 0; })
-      .sort(function (a, b) { return String(a.groupe).localeCompare(String(b.groupe)) || String(a.nom).localeCompare(String(b.nom)); });
+    const rows = exList().filter(function (e) { return !q || norm(e.nom).indexOf(q) >= 0; });
+    let lastGroup = null;
     rows.forEach(function (e) {
+      if (e.groupe !== lastGroup) {
+        lastGroup = e.groupe;
+        list.append(h('div', { class: 'small muted', style: 'padding:12px 4px 2px;font-weight:700;text-transform:uppercase;letter-spacing:.04em', text: e.groupe || 'Autre' }));
+      }
       list.append(h('div', { class: 'item', onclick: function () { exerciseForm(e); } },
         h('span', {}, e.nom, e.principal === 'oui' ? ' ★' : ''),
-        h('span', { class: 'small muted', text: e.groupe + (e.type === 'poids_du_corps' ? ' · PdC' : '') })));
+        h('span', { class: 'small muted', text: e.type === 'poids_du_corps' ? 'PdC' : '' })));
     });
     if (!rows.length) list.append(h('p', { class: 'muted', text: 'Aucun exercice.' }));
   }
   search.addEventListener('input', fill); fill();
   wrap.append(h('div', { class: 'row', style: 'margin-bottom:10px' }, h('div', { class: 'grow' }, search),
     h('button', { class: 'btn primary', text: '+ Exercice', onclick: function () { exerciseForm(null); } })), list);
+  wrap.append(h('div', { class: 'row' },
+    h('span', { class: 'small muted grow', text: (S.data.config.exercices || []).length + ' exercices · ★ = principal (objectif 1RM)' }),
+    h('button', { class: 'btn small ghost', text: 'Compléter avec le catalogue de base', onclick: function () {
+      const n = seedCatalog(); toast(n ? n + ' exercice(s) ajouté(s)' : 'Catalogue déjà complet'); render();
+    } })));
   return wrap;
 }
 function exerciseForm(ex) {
@@ -893,6 +1069,7 @@ function exerciseForm(ex) {
       h('button', { class: 'btn ghost grow', text: 'Annuler', onclick: closeModal }),
       h('button', { class: 'btn primary grow', text: 'Enregistrer', onclick: function () {
         if (!nom.value.trim()) { toast('Nom requis'); return; }
+        if (isNew && (S.data.config.exercices || []).some(function (x) { return norm(x.nom) === norm(nom.value); })) { toast('Cet exercice existe déjà'); return; }
         const row = { id: ex.id || slug(nom.value) + '-' + uid().slice(-3), nom: nom.value.trim(), groupe: gr.value, type: ty.value,
           principal: pr.checked ? 'oui' : 'non', repos: num(rep.value) === null ? '' : num(rep.value), pas: num(pas.value) === null ? '' : num(pas.value), pile: pile.value.trim() };
         const list = S.data.config.exercices;
@@ -1009,7 +1186,7 @@ function pickForPlan(m, back) {
   function fill() {
     list.innerHTML = '';
     const q = norm(search.value), used = planRows(m.id).map(function (p) { return p.exercice; });
-    (S.data.config.exercices || []).filter(function (e) { return used.indexOf(e.id) < 0 && (!q || norm(e.nom).indexOf(q) >= 0); })
+    exList().filter(function (e) { return used.indexOf(e.id) < 0 && (!q || norm(e.nom).indexOf(q) >= 0); })
       .forEach(function (e) {
         list.append(h('div', { class: 'item', onclick: function () {
           S.data.config.plan.push({ modele: m.id, exercice: e.id, ordre: used.length + 1, series: 3, rmin: 8, rmax: 12 });
@@ -1040,7 +1217,7 @@ function tabGoals() {
 }
 function goalForm() {
   const ty = h('select', {}, opts([['1RM', '1RM d\'un exercice'], ['poids', 'Poids'], ['mg', 'Masse grasse']], '1RM'));
-  const mains = (S.data.config.exercices || []).filter(function (e) { return e.principal === 'oui'; });
+  const mains = exList().filter(function (e) { return e.principal === 'oui'; });
   const exs = h('select', {}, opts(mains.map(function (e) { return [e.id, e.nom]; }), ''));
   const exField = field('Exercice (principaux uniquement)', exs);
   const dep = h('input', { type: 'text', inputmode: 'decimal', placeholder: 'valeur actuelle' });
@@ -1099,43 +1276,24 @@ function tabSettings() {
     h('div', { class: 'row' },
       h('button', { class: 'btn ghost', text: 'Synchroniser', onclick: async function () { toast('Synchronisation…'); await refresh(); toast(S.syncErr ? 'Échec : ' + S.syncErr.slice(0, 40) : 'À jour'); } }),
       h('button', { class: 'btn ghost', text: 'Modifier', onclick: function () { go('setup'); } })));
-  if (!(S.data.config.exercices || []).length) card2.append(h('div', { class: 'row', style: 'margin-top:10px' }, h('button', { class: 'btn ghost', text: 'Charger l\'exemple Push / Pull / Legs', onclick: seedExample })));
+  if (!(S.data.config.modeles || []).length) card2.append(h('div', { class: 'row', style: 'margin-top:10px' }, h('button', { class: 'btn ghost', text: 'Charger l\'exemple Push / Pull / Legs', onclick: seedExample })));
   wrap.append(card2);
   return wrap;
 }
 
 /* --- Exemple de depart --- */
 function seedExample() {
-  const E = [
-    ['dc-barre', 'Développé couché barre', 'Pectoraux', 'charge', 'oui', 150, 2.5],
-    ['dc-incline-halteres', 'Développé incliné haltères', 'Pectoraux', 'charge', 'non', 120, 2],
-    ['dev-militaire', 'Développé militaire', 'Épaules', 'charge', 'oui', 150, 2.5],
-    ['elevations-laterales', 'Élévations latérales', 'Épaules', 'charge', 'non', 60, 1],
-    ['dips', 'Dips', 'Triceps', 'poids_du_corps', 'non', 120, 2.5],
-    ['extension-triceps-poulie', 'Extension triceps poulie', 'Triceps', 'charge', 'non', 60, 2.5],
-    ['tractions', 'Tractions', 'Dos', 'poids_du_corps', 'non', 120, 2.5],
-    ['rowing-barre', 'Rowing barre', 'Dos', 'charge', 'oui', 120, 2.5],
-    ['tirage-vertical', 'Tirage vertical', 'Dos', 'charge', 'non', 90, 2.5],
-    ['face-pull', 'Face pull', 'Épaules', 'charge', 'non', 60, 2.5],
-    ['curl-barre', 'Curl barre', 'Biceps', 'charge', 'non', 75, 2.5],
-    ['curl-marteau', 'Curl marteau', 'Biceps', 'charge', 'non', 60, 1],
-    ['squat', 'Squat', 'Quadriceps', 'charge', 'oui', 180, 2.5],
-    ['presse', 'Presse à cuisses', 'Quadriceps', 'charge', 'oui', 150, 5],
-    ['souleve-roumain', 'Soulevé de terre roumain', 'Ischios', 'charge', 'non', 120, 2.5],
-    ['leg-curl', 'Leg curl', 'Ischios', 'charge', 'non', 75, 2.5],
-    ['mollets-debout', 'Mollets debout', 'Mollets', 'charge', 'non', 60, 5],
-    ['crunch', 'Crunch', 'Abdos', 'poids_du_corps', 'non', 60, 2.5]
-  ];
   const C = S.data.config;
-  C.exercices = E.map(function (x) { return { id: x[0], nom: x[1], groupe: x[2], type: x[3], principal: x[4], repos: x[5], pas: x[6], pile: '' }; });
+  seedCatalog();
   const pid = uid();
-  C.programmes = [{ id: pid, nom: 'Programme 1', debut: todayStr(), actif: 'oui' }];
+  const hasActive = (C.programmes || []).some(function (x) { return String(x.actif).toLowerCase() === 'oui'; });
+  C.programmes = (C.programmes || []).concat([{ id: pid, nom: 'Programme ' + ((C.programmes || []).length + 1), debut: todayStr(), actif: hasActive ? 'non' : 'oui' }]);
   const mk = function (nom, ordre, ids) { const id = uid(); return { m: { id: id, programme: pid, nom: nom, ordre: ordre, jour: '' }, p: ids.map(function (e, i) { return { modele: id, exercice: e[0], ordre: i + 1, series: e[1], rmin: e[2], rmax: e[3] }; }) }; };
   const push = mk('Push', 1, [['dc-barre', 4, 6, 8], ['dev-militaire', 3, 8, 10], ['dc-incline-halteres', 3, 8, 12], ['elevations-laterales', 3, 12, 15], ['extension-triceps-poulie', 3, 10, 12]]);
   const pull = mk('Pull', 2, [['rowing-barre', 4, 6, 8], ['tractions', 3, 6, 10], ['tirage-vertical', 3, 8, 12], ['face-pull', 3, 12, 15], ['curl-barre', 3, 8, 10], ['curl-marteau', 3, 10, 12]]);
   const legs = mk('Legs', 3, [['squat', 4, 6, 8], ['presse', 3, 8, 12], ['souleve-roumain', 3, 8, 10], ['leg-curl', 3, 10, 12], ['mollets-debout', 4, 10, 15], ['crunch', 3, 12, 15]]);
-  C.modeles = [push.m, pull.m, legs.m];
-  C.plan = push.p.concat(pull.p, legs.p);
+  C.modeles = (C.modeles || []).concat([push.m, pull.m, legs.m]);
+  C.plan = (C.plan || []).concat(push.p, pull.p, legs.p);
   ['exercices', 'programmes', 'modeles', 'plan'].forEach(saveConfig);
   render(); toast('Exemple chargé');
 }
@@ -1152,6 +1310,6 @@ function init() {
   checkStale();
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(function () {});
 }
-window.__muscu = { S: S, render: render, flush: flush, refresh: refresh, startSession: startSession, validateSet: validateSet, startDrop: startDrop, startTest: startTest, finishSession: finishSession, openFinish: openFinish, openGo: openGo, seedExample: seedExample, tick: tick, checkStale: checkStale, getDraft: getDraft, activeModels: activeModels, suggestModel: suggestModel };
+window.__muscu = { seedCatalog: seedCatalog, exList: exList, S: S, render: render, flush: flush, refresh: refresh, startSession: startSession, validateSet: validateSet, startDrop: startDrop, startTest: startTest, finishSession: finishSession, openFinish: openFinish, openGo: openGo, seedExample: seedExample, tick: tick, checkStale: checkStale, getDraft: getDraft, activeModels: activeModels, suggestModel: suggestModel };
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
