@@ -47,6 +47,18 @@ function dayKey(s) { return String(s || '').toLowerCase().normalize('NFD').repla
 const DAYS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
 const DAY_NAMES = { lun: 'Lundi', mar: 'Mardi', mer: 'Mercredi', jeu: 'Jeudi', ven: 'Vendredi', sam: 'Samedi', dim: 'Dimanche' };
 const GROUPES = ['Pectoraux', 'Dos', 'Épaules', 'Biceps', 'Triceps', 'Quadriceps', 'Ischios', 'Fessiers', 'Mollets', 'Abdos', 'Autre'];
+const GROUP_COLORS = { 'Pectoraux': '#ef6f6c', 'Dos': '#5b9dff', 'Épaules': '#f5a35b', 'Biceps': '#3ddc97', 'Triceps': '#b18cff', 'Quadriceps': '#4fd1d9', 'Ischios': '#e4c44f', 'Fessiers': '#ff8fc2', 'Mollets': '#8fbf5b', 'Abdos': '#a8b3c7', 'Autre': '#7d8596' };
+function gcolor(g) { return GROUP_COLORS[g] || GROUP_COLORS['Autre']; }
+const THEMES = [['vert', 'Vert', '#3ddc97'], ['bleu', 'Bleu', '#5b9dff'], ['orange', 'Orange', '#ffa24d'], ['violet', 'Violet', '#b18cff'], ['rose', 'Rose', '#ff7eb6'], ['jaune', 'Jaune', '#f2cf4a']];
+function applyTheme(id) {
+  const t = THEMES.find(function (x) { return x[0] === id; }) || THEMES[0], hex = t[2];
+  const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+  const st = document.documentElement.style;
+  st.setProperty('--accent', hex);
+  st.setProperty('--accent-soft', 'rgba(' + r + ',' + g + ',' + b + ',.14)');
+  st.setProperty('--accent-line', 'rgba(' + r + ',' + g + ',' + b + ',.45)');
+}
+function fmtDateFr(iso) { const d = new Date(iso); return p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + '/' + d.getFullYear(); }
 const EVENTS = ['Malade', 'Blessure', 'Resto', 'Mauvaise nuit', 'Voyage', 'Autre'];
 
 /* Catalogue de base : charge automatiquement une fois, sans doublons. [id, nom, groupe, type, principal, repos (s), pas (kg)] */
@@ -453,8 +465,9 @@ function applyToHistory(A) {
     const sets = byEx[exId].slice().sort(function (a, b) { return a.numero - b.numero || a.ordre - b.ordre; })
       .map(function (x) { return { n: x.numero, c: x.charge, r: x.reps, o: x.ordre, t: x.type }; });
     const rec = { sid: A.id, date: A.start, sets: sets };
-    if (A.modele) { H.lastByModel[A.modele] = H.lastByModel[A.modele] || {}; H.lastByModel[A.modele][exId] = rec; }
-    H.lastAny[exId] = rec;
+    const newer = function (cur) { return !cur || Date.parse(cur.date) <= Date.parse(rec.date); };
+    if (A.modele) { H.lastByModel[A.modele] = H.lastByModel[A.modele] || {}; if (newer(H.lastByModel[A.modele][exId])) H.lastByModel[A.modele][exId] = rec; }
+    if (newer(H.lastAny[exId])) H.lastAny[exId] = rec;
     H.n[exId] = (H.n[exId] || 0) + 1;
     const b = bestOf(EX(exId), sets, A.start);
     if (b && (!H.best[exId] || b.e > H.best[exId].e + 1e-9)) {
@@ -549,7 +562,7 @@ function renderHome() {
   if (S.active) {
     root.append(h('div', { class: 'card' },
       h('h2', { text: 'Séance en cours' }),
-      h('p', { class: 'muted', text: S.active.nom + ' · démarrée à ' + hhmm(Date.parse(S.active.start)) }),
+      h('p', { class: 'muted', text: S.active.past ? S.active.nom + ' · séance passée du ' + fmtDateFr(S.active.start) : S.active.nom + ' · démarrée à ' + hhmm(Date.parse(S.active.start)) }),
       h('button', { class: 'btn primary', text: 'Reprendre la séance', onclick: function () { go('session'); } })));
   } else if (empty) {
     root.append(h('div', { class: 'card' },
@@ -561,10 +574,11 @@ function renderHome() {
   } else {
     root.append(h('button', { class: 'go', onclick: openGo }, 'GO!', h('small', { text: 'Lancer une séance' })));
   }
-  root.append(h('div', { class: 'row even', style: 'margin:8px 0 14px' },
-    h('button', { class: 'btn grow ghost', text: '⚖ Pesée', onclick: openWeigh }),
-    h('button', { class: 'btn grow ghost', text: '🏃 Autre sport', onclick: openSport }),
-    h('button', { class: 'btn grow ghost', text: '📌 Événement', onclick: openEvent })));
+  root.append(h('div', { class: 'grid2 quick' },
+    h('button', { class: 'btn ghost', text: '⚖ Pesée', onclick: openWeigh }),
+    h('button', { class: 'btn ghost', text: '🏃 Autre sport', onclick: openSport }),
+    h('button', { class: 'btn ghost', text: '📌 Événement', onclick: openEvent }),
+    h('button', { class: 'btn ghost', text: '🕘 Séance passée', onclick: openPast })));
   root.append(renderKpis());
   return root;
 }
@@ -658,12 +672,32 @@ function showLaunch(m, why) {
     others);
   openModal(box);
 }
-function startSession(m) {
-  const id = uid(), now = new Date().toISOString();
+/* Saisie d'une seance deja faite : date et heure au choix, series horodatees dans cette seance */
+function openPast() {
+  if (S.active) { toast('Termine d\'abord la séance en cours'); return; }
+  const date = h('input', { type: 'date', value: todayStr(new Date(Date.now() - 86400000)), max: todayStr() });
+  const time = h('input', { type: 'time', value: '18:00' });
+  const dur = h('input', { type: 'text', inputmode: 'numeric', value: '60' });
+  const ms = activeModels();
+  const sel = h('select', {}, opts(ms.map(function (m) { return [m.id, m.nom]; }).concat([['', 'Séance libre (sans plan)']]), ms.length ? ms[0].id : ''));
+  openModal(h('div', {}, h('h2', { text: 'Séance passée' }),
+    h('p', { class: 'small muted', text: 'Pour reprendre une séance notée ailleurs. Elle compte dans l\'historique à la date choisie.' }),
+    field('Séance', sel), field('Date', date), field('Heure de début', time), field('Durée estimée (min)', dur),
+    h('div', { class: 'row' },
+      h('button', { class: 'btn ghost grow', text: 'Annuler', onclick: closeModal }),
+      h('button', { class: 'btn primary grow', text: 'Saisir les séries', onclick: function () {
+        const t = Date.parse(date.value + 'T' + (time.value || '18:00'));
+        if (isNaN(t) || t > Date.now()) { toast('Date invalide ou dans le futur'); return; }
+        closeModal();
+        startSession(MOD(sel.value) || null, { start: new Date(t).toISOString(), dur: Math.max(1, Math.round(num(dur.value) || 60)) });
+      } }))));
+}
+function startSession(m, past) {
+  const id = uid(), now = past ? past.start : new Date().toISOString();
   S.active = {
     id: id, modele: m ? m.id : '', nom: m ? m.nom : 'Séance libre', start: now,
     exercises: m ? planRows(m.id).map(function (p) { return p.exercice; }) : [],
-    sets: [], restEnd: null, restTotal: 0
+    sets: [], restEnd: null, restTotal: 0, past: !!past, pastDur: past ? past.dur : 0
   };
   S.drafts = {};
   LS.set('active', S.active);
@@ -730,7 +764,8 @@ function card(exId) {
   const plan = planFor(A.modele, exId), last = lastRec(A.modele, exId), best = S.data.history.best[exId];
   const sets = A.sets.filter(function (s) { return s.ex === exId; });
   const d = getDraft(exId);
-  const el = h('div', { class: 'card', id: 'card-' + exId });
+  const el = h('div', { class: 'card gc', id: 'card-' + exId, style: '--gc:' + gcolor(ex.groupe) });
+  if (ex.groupe) el.append(h('div', { class: 'gtag' }, h('span', { class: 'gdot' }), h('span', { text: ex.groupe })));
   let target = '';
   if (plan) { const a = num(plan.rmin), b = num(plan.rmax); target = plan.series + ' × ' + (a === b || !b ? a : a + '-' + b); }
   el.append(h('h2', {}, h('span', { text: ex.nom }), h('span', { class: 'small muted', text: target })));
@@ -783,10 +818,10 @@ function validateSet(exId) {
   const c = num(d.charge), r = d.type === 'test_1RM' ? 1 : num(d.reps);
   if (c === null || r === null || r <= 0 || (!bw && !(c > 0))) { toast('Charge et reps requises'); return; }
   const id = uid();
-  const set = { id: id, ex: exId, numero: d.numero, type: d.type, groupe: d.groupe || id, ordre: d.ordre, charge: c, reps: Math.round(r), ts: new Date().toISOString(), note: '' };
+  const set = { id: id, ex: exId, numero: d.numero, type: d.type, groupe: d.groupe || id, ordre: d.ordre, charge: c, reps: Math.round(r), ts: A.past ? new Date(Date.parse(A.start) + (A.sets.length + 1) * 180000).toISOString() : new Date().toISOString(), note: '' };
   A.sets.push(set);
   const secs = num(ex.repos) || setting('repos_defaut', 90);
-  A.restEnd = Date.now() + secs * 1000; A.restTotal = secs; A.vibrated = false;
+  if (!A.past) { A.restEnd = Date.now() + secs * 1000; A.restTotal = secs; A.vibrated = false; }
   persistActive();
   enqueue({ action: 'addSets', sets: [setRow(set)] });
   delete S.drafts[exId];
@@ -831,6 +866,17 @@ function editSetNote(s) {
   enqueue({ action: 'addSets', sets: [setRow(s)] });
   replaceCard(s.ex);
 }
+/* Liste d'exercices avec un titre colore par groupe musculaire (selecteurs) */
+function pickerGroups(list, rows, onPick) {
+  list.innerHTML = '';
+  let last = null;
+  rows.forEach(function (e) {
+    const g = e.groupe || 'Autre';
+    if (g !== last) { last = g; list.append(h('div', { class: 'gtitle', style: '--gc:' + gcolor(g) }, h('span', { class: 'gdot' }), h('span', { text: g }))); }
+    list.append(h('div', { class: 'item', style: '--gc:' + gcolor(g), onclick: function () { onPick(e); } },
+      h('span', { text: e.nom }), e.principal === 'oui' ? h('span', { class: 'small', style: 'color:var(--warn)', text: '★' }) : null));
+  });
+}
 function addExercisePicker() {
   const A = S.active;
   const search = h('input', { type: 'text', placeholder: 'Rechercher un exercice' });
@@ -838,13 +884,10 @@ function addExercisePicker() {
   function fill() {
     list.innerHTML = '';
     const q = norm(search.value);
-    exList().filter(function (e) { return A.exercises.indexOf(e.id) < 0 && (!q || norm(e.nom).indexOf(q) >= 0); })
-      .forEach(function (e) {
-        list.append(h('div', { class: 'item', onclick: function () {
-          A.exercises.push(e.id); persistActive(); closeModal();
-          $('cards').append(card(e.id)); toast(e.nom + ' ajouté');
-        } }, h('span', { text: e.nom }), h('span', { class: 'small muted', text: e.groupe })));
-      });
+    pickerGroups(list, exList().filter(function (e) { return A.exercises.indexOf(e.id) < 0 && (!q || norm(e.nom).indexOf(q) >= 0); }), function (e) {
+      A.exercises.push(e.id); persistActive(); closeModal();
+      $('cards').append(card(e.id)); toast(e.nom + ' ajouté');
+    });
     if (!list.children.length) list.append(h('p', { class: 'muted', text: 'Aucun exercice. Crée-en dans ⚙ › Exercices.' }));
   }
   search.addEventListener('input', fill); fill();
@@ -857,6 +900,7 @@ function addExercisePicker() {
 function tick() {
   if (S.view !== 'session' || !S.active) return;
   const A = S.active, g = $('t-global'), r = $('t-rest');
+  if (A.past) { if (g) g.textContent = '🕘 ' + fmtDateFr(A.start); if (r) r.textContent = ''; return; }
   if (g) g.textContent = mmss(Date.now() - Date.parse(A.start));
   if (r) {
     if (A.restEnd) {
@@ -883,6 +927,22 @@ function openFinish() {
       h('div', { class: 'row' },
         h('button', { class: 'btn ghost grow', text: 'Continuer', onclick: closeModal }),
         h('button', { class: 'btn danger grow', text: 'Annuler la séance', onclick: function () { closeModal(); cancelSession(); } }))));
+    return;
+  }
+  if (A.past) {
+    const lt = Date.parse(sets[sets.length - 1].ts);
+    const dur = h('input', { type: 'text', inputmode: 'numeric', value: A.pastDur || 60 });
+    const pnote = h('textarea', { placeholder: 'Commentaire (optionnel)' });
+    openModal(h('div', {}, h('h2', { text: 'Enregistrer la séance passée' }),
+      h('p', { class: 'muted', text: 'Du ' + fmtDateFr(A.start) + ' à ' + hhmm(Date.parse(A.start)) + ' · ' + sets.length + ' séries' }),
+      field('Durée (min)', dur), pnote,
+      h('div', { class: 'row' },
+        h('button', { class: 'btn ghost grow', text: 'Continuer', onclick: closeModal }),
+        h('button', { class: 'btn primary grow', text: 'Enregistrer', onclick: function () {
+          closeModal();
+          const end = Math.max(Date.parse(A.start) + Math.max(1, num(dur.value) || 60) * 60000, lt + 60000);
+          finishSession(new Date(end).toISOString(), pnote.value.trim());
+        } }))));
     return;
   }
   const now = Date.now(), start = Date.parse(A.start), lastTs = Date.parse(sets[sets.length - 1].ts);
@@ -916,6 +976,7 @@ function finishSession(endIso, note) {
   const A = S.active;
   const dur = Math.max(1, Math.round((Date.parse(endIso) - Date.parse(A.start)) / 60000));
   S.data.sessions.push({ id: A.id, modele: A.modele, debut: A.start, fin: endIso, duree: dur });
+  S.data.sessions.sort(function (a, b) { return Date.parse(a.debut) - Date.parse(b.debut); });
   applyToHistory(A);
   enqueue({ action: 'upsertSession', session: { id: A.id, modele: A.modele, debut: A.start, fin: endIso, duree: dur, statut: 'terminée', note: note || '' } });
   S.active = null; LS.set('active', null); S.drafts = {};
@@ -930,7 +991,7 @@ function cancelSession() {
 }
 function checkStale() {
   const A = S.active;
-  if (!A) return;
+  if (!A || A.past) return;
   const lastTs = A.sets.length ? Date.parse(A.sets[A.sets.length - 1].ts) : Date.parse(A.start);
   const thr = setting('seuil_oubli_h', 4) * 3600e3;
   if (Date.now() - lastTs <= thr) return;
@@ -1024,28 +1085,38 @@ function renderManage() {
 function tabExercises() {
   const wrap = h('div', {});
   const search = h('input', { type: 'text', placeholder: 'Rechercher' });
-  const list = h('div', { class: 'list card' });
+  const box = h('div', {});
+  const openG = LS.get('openGroups', {});
   function fill() {
-    list.innerHTML = '';
+    box.innerHTML = '';
     const q = norm(search.value);
     const rows = exList().filter(function (e) { return !q || norm(e.nom).indexOf(q) >= 0; });
-    let lastGroup = null;
-    rows.forEach(function (e) {
-      if (e.groupe !== lastGroup) {
-        lastGroup = e.groupe;
-        list.append(h('div', { class: 'small muted', style: 'padding:12px 4px 2px;font-weight:700;text-transform:uppercase;letter-spacing:.04em', text: e.groupe || 'Autre' }));
+    const by = {};
+    rows.forEach(function (e) { const g = e.groupe || 'Autre'; (by[g] = by[g] || []).push(e); });
+    GROUPES.concat(Object.keys(by).filter(function (g) { return GROUPES.indexOf(g) < 0; })).forEach(function (g) {
+      if (!by[g]) return;
+      const open = q ? true : !!openG[g];
+      const gc = h('div', { class: 'gcard', style: '--gc:' + gcolor(g) });
+      gc.append(h('button', { class: 'ghead', onclick: function () { openG[g] = !openG[g]; LS.set('openGroups', openG); fill(); } },
+        h('span', { class: 'gdot' }), h('span', { class: 'gname', text: g }), h('span', { class: 'gcount', text: String(by[g].length) }), h('span', { class: 'gchev', text: open ? '▾' : '▸' })));
+      if (open) {
+        const body = h('div', { class: 'list gbody' });
+        by[g].forEach(function (e) {
+          body.append(h('div', { class: 'item', onclick: function () { exerciseForm(e); } },
+            h('span', {}, e.nom, e.principal === 'oui' ? h('span', { style: 'color:var(--warn)', text: ' ★' }) : null),
+            h('span', { class: 'small muted', text: e.type === 'poids_du_corps' ? 'PdC' : '' })));
+        });
+        gc.append(body);
       }
-      list.append(h('div', { class: 'item', onclick: function () { exerciseForm(e); } },
-        h('span', {}, e.nom, e.principal === 'oui' ? ' ★' : ''),
-        h('span', { class: 'small muted', text: e.type === 'poids_du_corps' ? 'PdC' : '' })));
+      box.append(gc);
     });
-    if (!rows.length) list.append(h('p', { class: 'muted', text: 'Aucun exercice.' }));
+    if (!rows.length) box.append(h('p', { class: 'muted', text: 'Aucun exercice.' }));
   }
   search.addEventListener('input', fill); fill();
   wrap.append(h('div', { class: 'row', style: 'margin-bottom:10px' }, h('div', { class: 'grow' }, search),
-    h('button', { class: 'btn primary', text: '+ Exercice', onclick: function () { exerciseForm(null); } })), list);
-  wrap.append(h('div', { class: 'row' },
-    h('span', { class: 'small muted grow', text: (S.data.config.exercices || []).length + ' exercices · ★ = principal (objectif 1RM)' }),
+    h('button', { class: 'btn primary', text: '+ Exercice', onclick: function () { exerciseForm(null); } })), box);
+  wrap.append(h('div', { style: 'margin-top:4px' },
+    h('p', { class: 'small muted', text: (S.data.config.exercices || []).length + ' exercices · ★ = principal (objectif 1RM)' }),
     h('button', { class: 'btn small ghost', text: 'Compléter avec le catalogue de base', onclick: function () {
       const n = seedCatalog(); toast(n ? n + ' exercice(s) ajouté(s)' : 'Catalogue déjà complet'); render();
     } })));
@@ -1186,13 +1257,10 @@ function pickForPlan(m, back) {
   function fill() {
     list.innerHTML = '';
     const q = norm(search.value), used = planRows(m.id).map(function (p) { return p.exercice; });
-    exList().filter(function (e) { return used.indexOf(e.id) < 0 && (!q || norm(e.nom).indexOf(q) >= 0); })
-      .forEach(function (e) {
-        list.append(h('div', { class: 'item', onclick: function () {
-          S.data.config.plan.push({ modele: m.id, exercice: e.id, ordre: used.length + 1, series: 3, rmin: 8, rmax: 12 });
-          back();
-        } }, h('span', { text: e.nom }), h('span', { class: 'small muted', text: e.groupe })));
-      });
+    pickerGroups(list, exList().filter(function (e) { return used.indexOf(e.id) < 0 && (!q || norm(e.nom).indexOf(q) >= 0); }), function (e) {
+      S.data.config.plan.push({ modele: m.id, exercice: e.id, ordre: used.length + 1, series: 3, rmin: 8, rmax: 12 });
+      back();
+    });
     if (!list.children.length) list.append(h('p', { class: 'muted', text: 'Aucun exercice disponible. Crée-en dans l\'onglet Exercices.' }));
   }
   search.addEventListener('input', fill); fill();
@@ -1271,6 +1339,15 @@ function tabSettings() {
   } }));
   wrap.append(card1);
 
+  const curTheme = LS.get('theme', 'vert');
+  const sw = h('div', { class: 'swatches' });
+  THEMES.forEach(function (t) {
+    sw.append(h('button', { class: 'swatch' + (curTheme === t[0] ? ' on' : ''), style: 'background:' + t[2], title: t[1], 'aria-label': t[1], onclick: function () { LS.set('theme', t[0]); applyTheme(t[0]); render(); } }));
+  });
+  wrap.append(h('div', { class: 'card' }, h('h2', { text: 'Apparence' }), h('p', { class: 'small muted', text: 'Couleur principale (réglage propre à ce téléphone).' }), sw));
+  wrap.append(h('div', { class: 'card' }, h('h2', { text: 'Partager' }),
+    h('p', { class: 'small muted', text: 'Envoie le lien de l\'appli (jamais ton moteur, ta clé ni tes données). Un ami aura besoin de son propre Google Sheet : envoie-lui aussi le guide de mise en place.' }),
+    h('button', { class: 'btn ghost', text: '↗ Partager l\'appli', onclick: shareApp })));
   const card2 = h('div', { class: 'card' }, h('h2', { text: 'Connexion' }),
     h('p', { class: 'small muted', text: S.cfg.url ? 'Moteur : …' + S.cfg.url.slice(-28) : 'Non connecté' }),
     h('div', { class: 'row' },
@@ -1279,6 +1356,13 @@ function tabSettings() {
   if (!(S.data.config.modeles || []).length) card2.append(h('div', { class: 'row', style: 'margin-top:10px' }, h('button', { class: 'btn ghost', text: 'Charger l\'exemple Push / Pull / Legs', onclick: seedExample })));
   wrap.append(card2);
   return wrap;
+}
+
+async function shareApp() {
+  const url = location.href.split('#')[0].split('?')[0].replace(/index\.html$/, '');
+  const text = 'Suivi muscu : appli gratuite à installer depuis Chrome (⋮ puis Installer l\'application).';
+  if (navigator.share) { try { await navigator.share({ title: 'Suivi muscu', text: text, url: url }); } catch (e) { /* annule */ } return; }
+  try { await navigator.clipboard.writeText(url); toast('Lien copié'); } catch (e) { prompt('Copie ce lien', url); }
 }
 
 /* --- Exemple de depart --- */
@@ -1302,6 +1386,7 @@ function seedExample() {
 /* Demarrage                                                           */
 /* ================================================================== */
 function init() {
+  applyTheme(LS.get('theme', 'vert'));
   render();
   window.addEventListener('online', function () { flush().then(refresh); });
   document.addEventListener('visibilitychange', function () { if (!document.hidden) { flush(); tick(); } });
@@ -1310,6 +1395,6 @@ function init() {
   checkStale();
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(function () {});
 }
-window.__muscu = { seedCatalog: seedCatalog, exList: exList, S: S, render: render, flush: flush, refresh: refresh, startSession: startSession, validateSet: validateSet, startDrop: startDrop, startTest: startTest, finishSession: finishSession, openFinish: openFinish, openGo: openGo, seedExample: seedExample, tick: tick, checkStale: checkStale, getDraft: getDraft, activeModels: activeModels, suggestModel: suggestModel };
+window.__muscu = { seedCatalog: seedCatalog, openPast: openPast, applyTheme: applyTheme, shareApp: shareApp, exList: exList, S: S, render: render, flush: flush, refresh: refresh, startSession: startSession, validateSet: validateSet, startDrop: startDrop, startTest: startTest, finishSession: finishSession, openFinish: openFinish, openGo: openGo, seedExample: seedExample, tick: tick, checkStale: checkStale, getDraft: getDraft, activeModels: activeModels, suggestModel: suggestModel };
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
