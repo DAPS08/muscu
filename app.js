@@ -58,6 +58,8 @@ function applyTheme(id) {
   st.setProperty('--accent-soft', 'rgba(' + r + ',' + g + ',' + b + ',.14)');
   st.setProperty('--accent-line', 'rgba(' + r + ',' + g + ',' + b + ',.45)');
 }
+const BGS = [['points', 'Points'], ['grille', 'Grille'], ['diagonales', 'Diagonales'], ['degrade', 'Dégradé'], ['emojis', 'Emojis'], ['uni', 'Uni']];
+function applyBg(id) { document.documentElement.setAttribute('data-bg', BGS.some(function (b) { return b[0] === id; }) ? id : 'points'); }
 function fmtDateFr(iso) { const d = new Date(iso); return p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + '/' + d.getFullYear(); }
 const EVENTS = ['Malade', 'Blessure', 'Resto', 'Mauvaise nuit', 'Voyage', 'Autre'];
 
@@ -1344,7 +1346,14 @@ function tabSettings() {
   THEMES.forEach(function (t) {
     sw.append(h('button', { class: 'swatch' + (curTheme === t[0] ? ' on' : ''), style: 'background:' + t[2], title: t[1], 'aria-label': t[1], onclick: function () { LS.set('theme', t[0]); applyTheme(t[0]); render(); } }));
   });
-  wrap.append(h('div', { class: 'card' }, h('h2', { text: 'Apparence' }), h('p', { class: 'small muted', text: 'Couleur principale (réglage propre à ce téléphone).' }), sw));
+  const curBg = LS.get('bg', 'points');
+  const bgs = h('div', { class: 'chips' });
+  BGS.forEach(function (b) {
+    bgs.append(h('button', { class: 'btn small ' + (curBg === b[0] ? 'primary' : 'ghost'), text: b[1], onclick: function () { LS.set('bg', b[0]); applyBg(b[0]); render(); } }));
+  });
+  wrap.append(h('div', { class: 'card' }, h('h2', { text: 'Apparence' }),
+    h('p', { class: 'small muted', text: 'Couleur principale (réglage propre à ce téléphone).' }), sw,
+    h('p', { class: 'small muted', style: 'margin-top:12px', text: 'Fond de l\'écran' }), bgs));
   wrap.append(h('div', { class: 'card' }, h('h2', { text: 'Partager' }),
     h('p', { class: 'small muted', text: 'Envoie le lien de l\'appli (jamais ton moteur, ta clé ni tes données). Un ami aura besoin de son propre Google Sheet : envoie-lui aussi le guide de mise en place.' }),
     h('button', { class: 'btn ghost', text: '↗ Partager l\'appli', onclick: shareApp })));
@@ -1387,6 +1396,7 @@ function seedExample() {
 /* ================================================================== */
 function init() {
   applyTheme(LS.get('theme', 'vert'));
+  applyBg(LS.get('bg', 'points'));
   render();
   window.addEventListener('online', function () { flush().then(refresh); });
   document.addEventListener('visibilitychange', function () { if (!document.hidden) { flush(); tick(); } });
@@ -1395,6 +1405,6 @@ function init() {
   checkStale();
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(function () {});
 }
-window.__muscu = { seedCatalog: seedCatalog, openPast: openPast, applyTheme: applyTheme, shareApp: shareApp, exList: exList, S: S, render: render, flush: flush, refresh: refresh, startSession: startSession, validateSet: validateSet, startDrop: startDrop, startTest: startTest, finishSession: finishSession, openFinish: openFinish, openGo: openGo, seedExample: seedExample, tick: tick, checkStale: checkStale, getDraft: getDraft, activeModels: activeModels, suggestModel: suggestModel };
+window.__muscu = { seedCatalog: seedCatalog, openPast: openPast, applyTheme: applyTheme, applyBg: applyBg, shareApp: shareApp, exList: exList, S: S, render: render, flush: flush, refresh: refresh, startSession: startSession, validateSet: validateSet, startDrop: startDrop, startTest: startTest, finishSession: finishSession, openFinish: openFinish, openGo: openGo, seedExample: seedExample, tick: tick, checkStale: checkStale, getDraft: getDraft, activeModels: activeModels, suggestModel: suggestModel };
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

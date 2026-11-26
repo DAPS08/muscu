@@ -6,7 +6,7 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-body{padding-bottom:env(safe-area-inset-bottom)}
+body{padding-bottom:env(safe-area-inset-bottom);min-height:100vh}
 button,input,select,textarea{font:inherit;color:inherit}
 h1,h2,h3{margin:0 0 8px;line-height:1.2}
 h1{font-size:1.3rem} h2{font-size:1.1rem} h3{font-size:1rem}
@@ -19,7 +19,7 @@ p{margin:0 0 8px}
 .badge.ok{color:var(--accent)} .badge.wait{color:var(--warn)} .badge.err{color:var(--bad)}
 .btn{border:0;border-radius:12px;padding:12px 16px;background:var(--card2);color:var(--text);font-weight:600;cursor:pointer;min-height:46px}
 .btn.primary{background:var(--accent);color:var(--accent-ink)}
-.btn.ghost{background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--text)}
+.btn.ghost{background:linear-gradient(var(--accent-soft),var(--accent-soft)),var(--card);border:1px solid var(--accent-line);color:var(--text)}
 .btn.danger{background:var(--bad);color:#2a0606}
 .btn.small{padding:6px 10px;min-height:34px;font-size:.9rem;border-radius:10px}
 .btn:disabled{opacity:.5}
@@ -88,3 +88,10 @@ textarea{min-height:70px}
 .swatches{display:flex;gap:12px;flex-wrap:wrap;margin:6px 0}
 .swatch{width:40px;height:40px;border-radius:99px;border:3px solid var(--card);cursor:pointer}
 .swatch.on{outline:3px solid var(--text);outline-offset:1px}
+
+/* fonds (choix dans Reglages > Apparence) */
+html[data-bg=points] body,html:not([data-bg]) body{background-image:radial-gradient(rgba(255,255,255,.10) 1.3px,transparent 1.6px);background-size:18px 18px}
+html[data-bg=grille] body{background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:24px 24px}
+html[data-bg=diagonales] body{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.035) 0 2px,transparent 2px 14px)}
+html[data-bg=degrade] body{background-image:radial-gradient(circle at 15% 0%,var(--accent-soft),transparent 55%),radial-gradient(circle at 100% 100%,rgba(255,255,255,.05),transparent 50%);background-attachment:fixed}
+html[data-bg=emojis] body{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='110' height='110'%3E%3Ctext x='8' y='36' font-size='22' opacity='.13'%3E💪%3C/text%3E%3Ctext x='62' y='96' font-size='22' opacity='.13'%3E🏋️%3C/text%3E%3C/svg%3E");background-size:110px 110px}
