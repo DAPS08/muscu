@@ -47,7 +47,7 @@ function dayKey(s) { return String(s || '').toLowerCase().normalize('NFD').repla
 const DAYS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
 const DAY_NAMES = { lun: 'Lundi', mar: 'Mardi', mer: 'Mercredi', jeu: 'Jeudi', ven: 'Vendredi', sam: 'Samedi', dim: 'Dimanche' };
 const GROUPES = ['Pectoraux', 'Dos', 'Épaules', 'Biceps', 'Triceps', 'Quadriceps', 'Ischios', 'Fessiers', 'Mollets', 'Abdos', 'Autre'];
-const VERSION = '1.6.2', VERSION_DATE = '26/11/2026';
+const VERSION = '1.7.0', VERSION_DATE = '26/11/2026';
 const GROUP_COLORS = { 'Pectoraux': '#ef6f6c', 'Dos': '#5b9dff', 'Épaules': '#f5a35b', 'Biceps': '#3ddc97', 'Triceps': '#b18cff', 'Quadriceps': '#4fd1d9', 'Ischios': '#e4c44f', 'Fessiers': '#ff8fc2', 'Mollets': '#8fbf5b', 'Abdos': '#a8b3c7', 'Autre': '#7d8596' };
 function gcolor(g) { return GROUP_COLORS[g] || GROUP_COLORS['Autre']; }
 const THEMES = [['vert', 'Vert', '#3ddc97'], ['bleu', 'Bleu', '#5b9dff'], ['orange', 'Orange', '#ffa24d'], ['violet', 'Violet', '#b18cff'], ['rose', 'Rose', '#ff7eb6'], ['jaune', 'Jaune', '#f2cf4a']];
@@ -504,6 +504,7 @@ function render() {
   if (S.view === 'setup') node = renderSetup();
   else if (S.view === 'session' && S.active) node = renderSession();
   else if (S.view === 'manage') node = renderManage();
+  else if (S.view === 'stats') node = renderStats();
   else { S.view = 'home'; node = renderHome(); }
   root.append(node);
   renderBadge();
@@ -515,7 +516,7 @@ function topbar(title, left) {
     h('h1', { class: 'grow', text: title }),
     h('span', { id: 'badge', class: 'badge', onclick: function () { refresh(); } }, '…'));
 }
-function go(view) { S.view = view; render(); window.scrollTo(0, 0); }
+function go(view) { S.view = view; render(); window.scrollTo(0, 0); if (view === 'stats') loadStats(); }
 
 /* ------------------------------------------------------------------ */
 /* Connexion au moteur                                                 */
@@ -576,6 +577,8 @@ const ICONS = {
   poids: '<rect x="3.5" y="4" width="17" height="16" rx="4.5"/><path d="M8 10.2a4.2 4.2 0 0 1 8 0"/><path d="M12 10.2l2-2.4"/>',
   sport: '<path d="M3 12h4l2.2-6 4.2 12 2.4-6H21"/>',
   evenement: '<path d="M6 21V4"/><path d="M6 4.5h11.5l-2.3 3.8 2.3 3.8H6"/>',
+  stats: '<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M21 20H3"/>',
+  infos: '<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20.5c.6-3.9 3.6-6 7.5-6s6.9 2.1 7.5 6"/>',
   passee: '<path d="M3.5 12a8.5 8.5 0 1 0 2.7-6.2L3.5 8.5"/><path d="M3.5 3.8v4.7h4.7"/><path d="M12 7.5V12l3 2"/>'
 };
 function renderHome() {
@@ -603,7 +606,8 @@ function renderHome() {
   };
   root.append(h('div', { class: 'grid2 quick' },
     qb('poids', 'Poids', openWeigh), qb('sport', 'Autre sport', openSport),
-    qb('evenement', 'Événement', openEvent), qb('passee', 'Séance passée', openPast)));
+    qb('evenement', 'Événement', openEvent), qb('passee', 'Séance passée', openPast),
+    qb('stats', 'Statistiques', function () { go('stats'); }), qb('infos', 'Infos perso', openInfos)));
   if (!empty) root.append(renderCalendar());
   root.append(renderKpis());
   return root;
@@ -717,37 +721,38 @@ function renderCalendar() {
   return card;
 }
 
+/* ------------------------------------------------------------------ */
+/* Repères (accueil)                                                   */
+/* ------------------------------------------------------------------ */
 function renderKpis() {
   const H = S.data.history;
   const wrap = h('div', { class: 'card' }, h('h2', { text: 'Repères' }));
-  const sessions = S.data.sessions || [];
-  const wk = sessions.filter(function (s) { return Date.parse(s.debut) >= weekStart(); }).length;
-  const target = setting('cible_seances_semaine', 0);
-  const last = sessions.length ? sessions[sessions.length - 1] : null;
-  const tiles = h('div', { class: 'grid2' });
-  tiles.append(h('div', { class: 'tile' }, h('div', { class: 'v', text: wk + (target ? ' / ' + target : '') }), h('div', { class: 'l', text: 'séances cette semaine' })));
-  tiles.append(h('div', { class: 'tile' }, h('div', { class: 'v', text: last ? daysAgo(last.debut) : '–' }), h('div', { class: 'l', text: 'dernière séance' })));
   const ms = (S.data.measures || []).filter(function (m) { return num(m.poids) !== null; });
   if (ms.length) {
     const lw = ms[ms.length - 1];
     const ref = ms.slice().reverse().find(function (m) { return (Date.parse(lw.date) - Date.parse(m.date)) / 864e5 >= 5; });
     let trend = '';
     if (ref) { const d = num(lw.poids) - num(ref.poids); trend = (d > 0 ? '+' : '') + fmtN(d) + ' kg sur ' + Math.round((Date.parse(lw.date) - Date.parse(ref.date)) / 864e5) + ' j'; }
-    tiles.append(h('div', { class: 'tile' }, h('div', { class: 'v', text: fmtN(num(lw.poids)) + ' kg' }), h('div', { class: 'l', text: 'poids' + (trend ? ' · ' + trend : '') })));
-    if (num(lw.mg) !== null) tiles.append(h('div', { class: 'tile' }, h('div', { class: 'v', text: fmtN(num(lw.mg)) + ' %' }), h('div', { class: 'l', text: 'masse grasse' })));
+    const mgv = num(lw.mg);
+    wrap.append(h('div', { class: 'rep', onclick: function () { S.stTab = 'corps'; go('stats'); } },
+      h('div', { class: 'rl' }, h('span', { class: 'rk', text: 'Corps' }), h('span', { class: 'small muted', text: 'pesée du ' + fmtDateFr(lw.date) })),
+      h('div', { class: 'rv' },
+        h('span', { class: 'big', text: fmtN(num(lw.poids)) + ' kg' }),
+        mgv !== null ? h('span', { class: 'mid', text: fmtN(mgv) + ' % MG' }) : null,
+        trend ? h('span', { class: 'small muted', text: trend }) : null)));
+  } else {
+    wrap.append(h('div', { class: 'rep', onclick: openWeigh }, h('div', { class: 'rl' }, h('span', { class: 'rk', text: 'Corps' })), h('p', { class: 'small muted', text: 'Aucune pesée : touche pour en ajouter une.' })));
   }
-  wrap.append(tiles);
-
   const goals = (S.data.config.objectifs || []).map(function (o) { return goalView(o); }).filter(Boolean);
-  if (goals.length) { wrap.append(h('h3', { style: 'margin-top:14px', text: 'Objectifs' })); goals.forEach(function (g) { wrap.append(g); }); }
-
+  if (goals.length) { wrap.append(h('h3', { class: 'rk2', text: 'Objectifs' })); goals.forEach(function (g) { wrap.append(g); }); }
   if (H.prs && H.prs.length) {
-    wrap.append(h('h3', { style: 'margin-top:14px', text: 'Derniers records' }));
-    const chips = h('div', { class: 'chips' });
-    H.prs.forEach(function (p) {
-      chips.append(h('span', { class: 'chip best', text: exName(p.ex) + ' ' + fmtN(p.c) + '×' + p.r + ' · ' + daysAgo(p.date) }));
+    wrap.append(h('h3', { class: 'rk2', text: 'Derniers records' }));
+    H.prs.slice(0, 2).forEach(function (p) {
+      wrap.append(h('div', { class: 'recline' }, h('span', { text: exName(p.ex) }), h('span', { class: 'muted', text: fmtN(p.c) + ' kg × ' + p.r + ' · ' + daysAgo(p.date) })));
     });
-    wrap.append(chips);
+  }
+  if (H.stagn && H.stagn.length) {
+    wrap.append(h('div', { class: 'warnbox', style: 'margin-top:12px' }, h('b', { text: 'Stagnation : ' }), H.stagn.slice(0, 3).map(exName).join(', ') + (H.stagn.length > 3 ? ' +' + (H.stagn.length - 3) : '')));
   }
   return wrap;
 }
@@ -762,12 +767,299 @@ function goalView(o) {
   else return null;
   if (cur === null) cur = dep;
   const pct = Math.max(0, Math.min(1, (cur - dep) / (cib - dep)));
+  const left = Math.max(0, (cib - cur) * (cib > dep ? 1 : -1));
   let when = '';
   if (o.dcible) { const d = Math.ceil((Date.parse(o.dcible) - Date.now()) / 864e5); when = d >= 0 ? ' · J-' + d : ' · échéance dépassée'; }
   return h('div', { class: 'goal' },
     h('div', { class: 't' }, h('span', { text: label }), h('span', { text: fmtN(cur) + ' / ' + fmtN(cib) + unit })),
     h('div', { class: 'bar' }, h('i', { style: 'width:' + Math.round(pct * 100) + '%' })),
-    h('div', { class: 'small muted', text: Math.round(pct * 100) + ' % du chemin' + when }));
+    h('div', { class: 'small muted', text: Math.round(pct * 100) + ' % · encore ' + fmtN(left) + unit + when }));
+}
+
+/* ------------------------------------------------------------------ */
+/* Infos perso                                                         */
+/* ------------------------------------------------------------------ */
+function weightGoal() { return (S.data.config.objectifs || []).find(function (o) { return o.type === 'poids'; }) || null; }
+function openInfos() {
+  const g = weightGoal();
+  const taille = h('input', { type: 'text', inputmode: 'decimal', value: fmtN(setting('taille_cm', null)), placeholder: 'ex. 178' });
+  const dep = h('input', { type: 'text', inputmode: 'decimal', value: g ? fmtN(num(g.depart)) : fmtN(latestWeight()), placeholder: 'ex. 82' });
+  const cib = h('input', { type: 'text', inputmode: 'decimal', value: g ? fmtN(num(g.cible)) : '', placeholder: 'ex. 78' });
+  const dt = h('input', { type: 'date', value: g ? String(g.dcible || '').slice(0, 10) : '' });
+  openModal(h('div', {}, h('h2', { text: 'Infos perso' }),
+    field('Taille (cm)', taille), field('Poids de départ (kg)', dep), field('Objectif de poids (kg)', cib), field('Date cible (optionnel)', dt),
+    h('p', { class: 'hint', text: 'Le poids de départ et l\'objectif servent à tracer ta trajectoire idéale sur la courbe de poids.' }),
+    h('div', { class: 'row' },
+      h('button', { class: 'btn ghost grow', text: 'Annuler', onclick: closeModal }),
+      h('button', { class: 'btn primary grow', text: 'Enregistrer', onclick: function () {
+        const C = S.data.config;
+        const t = num(taille.value);
+        C.reglages = (C.reglages || []).filter(function (r) { return r.cle !== 'taille_cm'; });
+        if (t !== null && t > 0) C.reglages.push({ cle: 'taille_cm', valeur: t });
+        saveConfig('reglages');
+        const d = num(dep.value), c = num(cib.value);
+        if (d !== null && c !== null && d !== c) {
+          C.objectifs = (C.objectifs || []).filter(function (o) { return o.type !== 'poids'; });
+          C.objectifs.push({ id: uid(), type: 'poids', exercice: '', depart: d, cible: c, ddebut: todayStr(), dcible: dt.value || '' });
+          saveConfig('objectifs');
+        } else if (dep.value === '' && cib.value === '' && g) {
+          C.objectifs = (C.objectifs || []).filter(function (o) { return o.type !== 'poids'; });
+          saveConfig('objectifs');
+        }
+        closeModal(); toast('Infos enregistrées'); render();
+      } }))));
+}
+
+/* ------------------------------------------------------------------ */
+/* Statistiques                                                        */
+/* ------------------------------------------------------------------ */
+const PERIODS = [['1m', '1 mois', 30], ['3m', '3 mois', 91], ['6m', '6 mois', 182], ['all', 'Tout', 0]];
+S.stats = LS.get('stats', null);
+S.stTab = S.stTab || 'corps';
+S.stPer = LS.get('stPer', '3m');
+S.stEx = S.stEx || '';
+S.stMod = S.stMod || '';
+S.statsErr = '';
+async function loadStats() {
+  if (!S.cfg.url || !S.cfg.key) return;
+  try {
+    await flush();
+    const j = await api({ action: 'stats' });
+    S.stats = j.data; LS.set('stats', S.stats); S.statsErr = '';
+  } catch (e) {
+    S.statsErr = /inconnue/i.test(e.message || '') ? 'maj' : (e.message || 'hors ligne');
+  }
+  if (S.view === 'stats') render();
+}
+function periodStart() {
+  const p = PERIODS.find(function (x) { return x[0] === S.stPer; });
+  return !p || !p[2] ? 0 : Date.now() - p[2] * 864e5;
+}
+function fmtShort(t) { const d = new Date(t); return p2(d.getDate()) + '/' + p2(d.getMonth() + 1); }
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+/* Courbe SVG : o.lines [{pts:[[t,v]], cls}], o.bands [{a,b,color,type}], o.goal [[t,v],[t,v]] ou null, o.unit */
+function lineChart(o) {
+  const W = 340, Hh = 180, L = 38, R = 10, T = 10, B = 24;
+  const all = [];
+  o.lines.forEach(function (l) { l.pts.forEach(function (p) { all.push(p); }); });
+  if (o.goal) o.goal.forEach(function (p) { all.push(p); });
+  if (!all.length) return h('p', { class: 'muted', text: 'Pas encore de données sur cette période.' });
+  let t0 = o.t0 !== undefined ? o.t0 : Math.min.apply(null, all.map(function (p) { return p[0]; }));
+  let t1 = o.t1 !== undefined ? o.t1 : Math.max.apply(null, all.map(function (p) { return p[0]; }));
+  if (t1 - t0 < 864e5) { t0 -= 864e5 * 3; t1 += 864e5 * 3; }
+  const vs = all.filter(function (p) { return p[0] >= t0 && p[0] <= t1; }).map(function (p) { return p[1]; });
+  let lo = Math.min.apply(null, vs), hi = Math.max.apply(null, vs);
+  if (!isFinite(lo)) { lo = 0; hi = 1; }
+  if (hi - lo < 1) { hi += 0.5; lo -= 0.5; }
+  const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
+  const X = function (t) { return L + (t - t0) / (t1 - t0) * (W - L - R); };
+  const Y = function (v) { return T + (hi - v) / (hi - lo) * (Hh - T - B); };
+  let s = '<svg viewBox="0 0 ' + W + ' ' + Hh + '" class="lc" role="img">';
+  for (let i = 0; i <= 3; i++) {
+    const v = lo + (hi - lo) * i / 3, y = Y(v);
+    s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '" class="gl"/><text x="' + (L - 5) + '" y="' + (y + 3.5).toFixed(1) + '" class="ax" text-anchor="end">' + esc(fmtN(v)) + '</text>';
+  }
+  for (let i = 0; i <= 3; i++) {
+    const t = t0 + (t1 - t0) * i / 3;
+    s += '<text x="' + X(t).toFixed(1) + '" y="' + (Hh - 7) + '" class="ax" text-anchor="' + (i === 0 ? 'start' : i === 3 ? 'end' : 'middle') + '">' + fmtShort(t) + '</text>';
+  }
+  (o.bands || []).forEach(function (b) {
+    const a = Math.max(b.a, t0), z = Math.min(b.b, t1);
+    if (z < a) return;
+    const x = X(a), w = Math.max(2, X(z) - X(a));
+    s += '<rect x="' + x.toFixed(1) + '" y="' + T + '" width="' + w.toFixed(1) + '" height="' + (Hh - T - B) + '" fill="' + b.color + '" opacity=".22"/>';
+  });
+  if (o.goal) s += '<line x1="' + X(o.goal[0][0]).toFixed(1) + '" y1="' + Y(o.goal[0][1]).toFixed(1) + '" x2="' + X(o.goal[1][0]).toFixed(1) + '" y2="' + Y(o.goal[1][1]).toFixed(1) + '" class="goalln"/>';
+  o.lines.forEach(function (l) {
+    const pts = l.pts.filter(function (p) { return p[0] >= t0 && p[0] <= t1; });
+    if (!pts.length) return;
+    s += '<polyline fill="none" class="ln ' + (l.cls || '') + '" points="' + pts.map(function (p) { return X(p[0]).toFixed(1) + ',' + Y(p[1]).toFixed(1); }).join(' ') + '"/>';
+    pts.forEach(function (p, i) {
+      s += '<circle cx="' + X(p[0]).toFixed(1) + '" cy="' + Y(p[1]).toFixed(1) + '" r="' + (i === pts.length - 1 ? 3.6 : 2.2) + '" class="dt ' + (l.cls || '') + '"/>';
+    });
+  });
+  s += '</svg>';
+  const box = h('div', { class: 'chart' });
+  box.innerHTML = s;
+  return box;
+}
+function eventBands(from, to) {
+  return (S.data.events || []).map(function (e) {
+    const a = Date.parse(String(e.debut).slice(0, 10) + 'T00:00:00'), b = Date.parse(String(e.fin || e.debut).slice(0, 10) + 'T23:59:59');
+    return { a: a, b: b, color: EV_COLORS[e.type] || EV_COLORS.Autre, type: e.type };
+  }).filter(function (b) { return !isNaN(b.a) && b.b >= from && b.a <= to; });
+}
+function bandLegend(bands) {
+  const seen = {}, row = h('div', { class: 'bleg' });
+  bands.forEach(function (b) { if (!seen[b.type]) { seen[b.type] = 1; row.append(h('span', {}, h('i', { style: 'background:' + b.color }), b.type)); } });
+  return bands.length ? row : null;
+}
+function exProgress(list, from) {
+  const pts = list.filter(function (x) { return Date.parse(x.d) >= from; });
+  if (pts.length < 2) return null;
+  const a = pts[0].e, z = pts[pts.length - 1].e;
+  return a > 0 ? (z - a) / a * 100 : null;
+}
+function pctTxt(v) { return (v > 0 ? '+' : '') + fmtN(v).replace(/^-/, '−') + ' %'; }
+function scoreBlock() {
+  const ser = (S.stats && S.stats.series) || {};
+  const from = periodStart();
+  const vals = [];
+  Object.keys(ser).forEach(function (id) { const p = exProgress(ser[id], from); if (p !== null) vals.push(p); });
+  const per = h('div', { class: 'chips' });
+  PERIODS.forEach(function (p) {
+    per.append(h('button', { class: 'btn small ' + (S.stPer === p[0] ? 'primary' : 'ghost'), text: p[1], onclick: function () { S.stPer = p[0]; LS.set('stPer', p[0]); render(); } }));
+  });
+  const avg = vals.length ? vals.reduce(function (a, b) { return a + b; }, 0) / vals.length : null;
+  const up = vals.filter(function (v) { return v > 0.05; }).length;
+  return h('div', { class: 'card' }, h('h2', { text: 'Score global' }),
+    h('div', { class: 'score' },
+      h('span', { class: 'big' + (avg !== null && avg < 0 ? ' neg' : ''), text: avg === null ? '–' : pctTxt(avg) }),
+      h('span', { class: 'small muted', text: avg === null ? 'Il faut au moins 2 séances d\'un même exercice sur la période.' : 'de force moyenne · ' + up + ' exercice' + (up > 1 ? 's' : '') + ' sur ' + vals.length + ' en progrès' })),
+    per);
+}
+function renderStats() {
+  const root = h('div', { class: 'screen' });
+  root.append(topbar('Statistiques', h('button', { class: 'btn small ghost', text: '‹', onclick: function () { go('home'); } })));
+  if (S.statsErr === 'maj') root.append(h('div', { class: 'warnbox', text: 'Le moteur Google n\'a pas encore la mise à jour des statistiques : colle la nouvelle version de Code.gs et redéploie (voir le guide). Les courbes de poids fonctionnent déjà.' }));
+  else if (S.statsErr) root.append(h('p', { class: 'small muted', text: 'Hors ligne : dernières données connues.' }));
+  root.append(scoreBlock());
+  const tabs = h('div', { class: 'tabs' });
+  [['corps', 'Corps'], ['exos', 'Exercices'], ['muscles', 'Muscles'], ['regul', 'Régularité']].forEach(function (t) {
+    tabs.append(h('button', { class: 'btn ' + (S.stTab === t[0] ? 'on' : 'ghost'), text: t[1], onclick: function () { S.stTab = t[0]; render(); } }));
+  });
+  root.append(tabs);
+  const body = S.stTab === 'exos' ? statsExos() : S.stTab === 'muscles' ? statsMuscles() : S.stTab === 'regul' ? statsRegul() : statsCorps();
+  root.append(body);
+  return root;
+}
+function statsCorps() {
+  const wrap = h('div', {});
+  const from = periodStart(), now = Date.now();
+  const ms = (S.data.measures || []).filter(function (m) { return num(m.poids) !== null; });
+  const inPer = ms.filter(function (m) { return Date.parse(m.date) >= from; });
+  const g = weightGoal();
+  const card = h('div', { class: 'card' }, h('h2', { text: 'Poids (kg)' }));
+  if (!ms.length) card.append(h('p', { class: 'muted', text: 'Aucune pesée. Utilise « Poids » sur l\'accueil.' }));
+  else {
+    const t0 = from || Math.min.apply(null, ms.map(function (m) { return Date.parse(m.date); }));
+    const bands = eventBands(t0, now);
+    let goal = null;
+    if (g && num(g.depart) !== null && num(g.cible) !== null) {
+      const a = Date.parse(String(g.ddebut || todayStr()).slice(0, 10) + 'T12:00:00');
+      const z = g.dcible ? Date.parse(String(g.dcible).slice(0, 10) + 'T12:00:00') : null;
+      goal = z && z > a ? [[a, num(g.depart)], [z, num(g.cible)]] : [[t0, num(g.cible)], [now, num(g.cible)]];
+    }
+    card.append(lineChart({ lines: [{ pts: inPer.map(function (m) { return [Date.parse(m.date), num(m.poids)]; }), cls: 'c1' }], bands: bands, goal: goal, t0: t0, t1: goal && g.dcible && goal[1][0] > now ? goal[1][0] : now }));
+    const leg = bandLegend(bands); if (leg) card.append(leg);
+    if (goal) card.append(h('p', { class: 'small muted', text: 'Ligne en pointillés : trajectoire idéale vers ton objectif.' }));
+    const lw = ms[ms.length - 1], th = setting('taille_cm', null);
+    if (th) card.append(h('p', { class: 'small muted', text: 'IMC actuel : ' + fmtN(num(lw.poids) / Math.pow(th / 100, 2)) }));
+    else card.append(h('p', { class: 'small muted', text: 'Ajoute ta taille dans « Infos perso » pour voir ton IMC.' }));
+  }
+  wrap.append(card);
+  const fat = (S.data.measures || []).filter(function (m) { return num(m.mg) !== null && Date.parse(m.date) >= from; });
+  if (fat.length) {
+    const c2 = h('div', { class: 'card' }, h('h2', { text: 'Masse grasse (%)' }));
+    const t0 = from || Math.min.apply(null, fat.map(function (m) { return Date.parse(m.date); }));
+    const bands = eventBands(t0, now);
+    c2.append(lineChart({ lines: [{ pts: fat.map(function (m) { return [Date.parse(m.date), num(m.mg)]; }), cls: 'c2' }], bands: bands, t0: t0, t1: now }));
+    wrap.append(c2);
+  }
+  wrap.append(h('button', { class: 'btn ghost', text: 'Infos perso', onclick: openInfos }));
+  return wrap;
+}
+function statsExos() {
+  const wrap = h('div', {});
+  const ser = (S.stats && S.stats.series) || {};
+  const ids = Object.keys(ser).filter(function (id) { return EX(id); });
+  if (!ids.length) { wrap.append(h('div', { class: 'card' }, h('p', { class: 'muted', text: S.statsErr === 'maj' ? 'Mets à jour le moteur Google pour voir les courbes d\'exercices.' : 'Pas encore de séance enregistrée.' }))); return wrap; }
+  const groups = GROUPES.filter(function (g) { return ids.some(function (id) { return EX(id).groupe === g; }); });
+  if (!S.stEx || ids.indexOf(S.stEx) < 0) S.stEx = ids.slice().sort(function (a, b) { return ser[b].length - ser[a].length; })[0];
+  const cur = EX(S.stEx);
+  const gsel = h('select', {}, opts(groups, cur.groupe));
+  const esel = h('select', {}, opts(ids.filter(function (id) { return EX(id).groupe === cur.groupe; }).map(function (id) { return [id, EX(id).nom]; }), S.stEx));
+  gsel.addEventListener('change', function () {
+    S.stEx = ids.filter(function (id) { return EX(id).groupe === gsel.value; })[0]; S.stMod = ''; render();
+  });
+  esel.addEventListener('change', function () { S.stEx = esel.value; S.stMod = ''; render(); });
+  const mods = {};
+  ser[S.stEx].forEach(function (x) { if (x.m) mods[x.m] = 1; });
+  const msel = h('select', {}, opts([['', 'Toutes les séances']].concat(Object.keys(mods).map(function (m) { const mm = MOD(m); return [m, mm ? mm.nom : m]; })), S.stMod));
+  msel.addEventListener('change', function () { S.stMod = msel.value; render(); });
+  const from = periodStart();
+  const rows = ser[S.stEx].filter(function (x) { return (!S.stMod || x.m === S.stMod) && Date.parse(x.d) >= from; });
+  const card = h('div', { class: 'card' }, h('h2', { text: '1RM estimé (kg)' }),
+    field('Groupe', gsel), field('Exercice', esel), Object.keys(mods).length > 1 ? field('Séance', msel) : null);
+  const t0 = from || (rows.length ? Date.parse(rows[0].d) : Date.now());
+  const bands = eventBands(t0, Date.now());
+  card.append(lineChart({ lines: [{ pts: rows.map(function (x) { return [Date.parse(x.d), x.e]; }), cls: 'c1' }], bands: bands, t0: t0, t1: Date.now() }));
+  const leg = bandLegend(bands); if (leg) card.append(leg);
+  if (rows.length >= 2) { const p = (rows[rows.length - 1].e - rows[0].e) / rows[0].e * 100; card.append(h('p', { class: 'small', text: 'Progression sur la période : ' + pctTxt(p) })); }
+  wrap.append(card);
+  const tb = h('div', { class: 'card' }, h('h2', { text: 'Dernières séances' }));
+  rows.slice(-8).reverse().forEach(function (x) {
+    tb.append(h('div', { class: 'recline' }, h('span', { text: fmtDateFr(x.d) }), h('span', { class: 'muted', text: fmtN(x.c) + ' kg × ' + x.r + ' · 1RM ' + fmtN(x.e) + ' · vol. ' + x.v })));
+  });
+  if (!rows.length) tb.append(h('p', { class: 'muted', text: 'Rien sur cette période.' }));
+  wrap.append(tb);
+  return wrap;
+}
+function statsMuscles() {
+  const ser = (S.stats && S.stats.series) || {};
+  const from = periodStart(), by = {};
+  Object.keys(ser).forEach(function (id) {
+    const e = EX(id); if (!e) return;
+    const p = exProgress(ser[id], from); if (p === null) return;
+    (by[e.groupe] = by[e.groupe] || []).push(p);
+  });
+  const list = Object.keys(by).map(function (g) { return { g: g, p: by[g].reduce(function (a, b) { return a + b; }, 0) / by[g].length, n: by[g].length }; }).sort(function (a, b) { return b.p - a.p; });
+  const card = h('div', { class: 'card' }, h('h2', { text: 'Progression par muscle' }));
+  if (!list.length) { card.append(h('p', { class: 'muted', text: 'Pas assez de séances sur cette période.' })); return card; }
+  const mx = Math.max.apply(null, list.map(function (x) { return Math.abs(x.p); })) || 1;
+  list.forEach(function (x) {
+    card.append(h('div', { class: 'mrow' }, h('span', { class: 'mn', text: x.g }),
+      h('span', { class: 'mbar' }, h('i', { class: x.p < 0 ? 'neg' : '', style: 'width:' + Math.max(3, Math.abs(x.p) / mx * 100) + '%' })),
+      h('span', { class: 'mv', text: pctTxt(x.p) })));
+  });
+  card.append(h('p', { class: 'small muted', style: 'margin-top:10px', text: 'Meilleur : ' + list[0].g + ' · Le plus à la traîne : ' + list[list.length - 1].g }));
+  return card;
+}
+function statsRegul() {
+  const sess = (S.data.sessions || []).slice();
+  const target = setting('cible_seances_semaine', 0);
+  const card = h('div', { class: 'card' }, h('h2', { text: 'Régularité' }));
+  if (!sess.length) { card.append(h('p', { class: 'muted', text: 'Pas encore de séance.' })); return card; }
+  const ws0 = weekStart(), N = 12, counts = [];
+  for (let i = N - 1; i >= 0; i--) {
+    const a = ws0 - i * 7 * 864e5, b = a + 7 * 864e5;
+    counts.push({ a: a, n: sess.filter(function (s) { const t = Date.parse(s.debut); return t >= a && t < b; }).length });
+  }
+  const mx = Math.max(target || 0, Math.max.apply(null, counts.map(function (c) { return c.n; })), 1);
+  const bars = h('div', { class: 'wbars' });
+  counts.forEach(function (c, i) {
+    bars.append(h('div', { class: 'wb' }, h('span', { class: 'wv', text: c.n || '' }), h('i', { class: target && c.n >= target ? 'ok' : '', style: 'height:' + Math.round(c.n / mx * 100) + '%' }), h('span', { class: 'wl', text: i % 3 === 0 ? fmtShort(c.a) : '' })));
+  });
+  card.append(h('p', { class: 'small muted', text: 'Séances par semaine (12 dernières semaines)' + (target ? ' · objectif ' + target : '') }), bars);
+  const last12 = counts.slice(0, N - 1).concat([counts[N - 1]]);
+  const avgW = last12.reduce(function (a, c) { return a + c.n; }, 0) / N;
+  const durs = sess.filter(function (s) { return num(s.duree) > 0; }).slice(-30).map(function (s) { return num(s.duree); });
+  const avgD = durs.length ? durs.reduce(function (a, b) { return a + b; }, 0) / durs.length : null;
+  const need = Math.max(1, target || 1);
+  let streak = 0;
+  for (let i = N - 1; i >= 0; i--) {
+    if (counts[i].n >= need) streak++;
+    else if (i === N - 1) continue;
+    else break;
+  }
+  const tiles = h('div', { class: 'grid2', style: 'margin-top:12px' });
+  tiles.append(h('div', { class: 'tile' }, h('div', { class: 'v', text: fmtN(avgW) }), h('div', { class: 'l', text: 'séances / semaine' })));
+  tiles.append(h('div', { class: 'tile' }, h('div', { class: 'v', text: avgD === null ? '–' : Math.round(avgD) + ' min' }), h('div', { class: 'l', text: 'durée moyenne' })));
+  tiles.append(h('div', { class: 'tile' }, h('div', { class: 'v', text: streak + (streak > 1 ? ' sem.' : ' sem.') }), h('div', { class: 'l', text: 'série en cours (≥ ' + need + ' séance' + (need > 1 ? 's' : '') + ')' })));
+  tiles.append(h('div', { class: 'tile' }, h('div', { class: 'v', text: String(sess.length) }), h('div', { class: 'l', text: 'séances enregistrées' })));
+  card.append(tiles);
+  return card;
 }
 
 /* ------------------------------------------------------------------ */
