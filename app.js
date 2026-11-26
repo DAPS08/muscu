@@ -47,7 +47,7 @@ function dayKey(s) { return String(s || '').toLowerCase().normalize('NFD').repla
 const DAYS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
 const DAY_NAMES = { lun: 'Lundi', mar: 'Mardi', mer: 'Mercredi', jeu: 'Jeudi', ven: 'Vendredi', sam: 'Samedi', dim: 'Dimanche' };
 const GROUPES = ['Pectoraux', 'Dos', 'Épaules', 'Biceps', 'Triceps', 'Quadriceps', 'Ischios', 'Fessiers', 'Mollets', 'Abdos', 'Autre'];
-const VERSION = '1.6.1', VERSION_DATE = '26/11/2026';
+const VERSION = '1.6.2', VERSION_DATE = '26/11/2026';
 const GROUP_COLORS = { 'Pectoraux': '#ef6f6c', 'Dos': '#5b9dff', 'Épaules': '#f5a35b', 'Biceps': '#3ddc97', 'Triceps': '#b18cff', 'Quadriceps': '#4fd1d9', 'Ischios': '#e4c44f', 'Fessiers': '#ff8fc2', 'Mollets': '#8fbf5b', 'Abdos': '#a8b3c7', 'Autre': '#7d8596' };
 function gcolor(g) { return GROUP_COLORS[g] || GROUP_COLORS['Autre']; }
 const THEMES = [['vert', 'Vert', '#3ddc97'], ['bleu', 'Bleu', '#5b9dff'], ['orange', 'Orange', '#ffa24d'], ['violet', 'Violet', '#b18cff'], ['rose', 'Rose', '#ff7eb6'], ['jaune', 'Jaune', '#f2cf4a']];
@@ -571,6 +571,13 @@ function suggestModel() {
   const i = ms.findIndex(function (m) { return m.id === lastS.modele; });
   return { m: ms[(i + 1) % ms.length], why: 'suite de ta rotation' };
 }
+/* Icones au trait (une seule couleur : la couleur principale choisie) */
+const ICONS = {
+  poids: '<rect x="3.5" y="4" width="17" height="16" rx="4.5"/><path d="M8 10.2a4.2 4.2 0 0 1 8 0"/><path d="M12 10.2l2-2.4"/>',
+  sport: '<path d="M3 12h4l2.2-6 4.2 12 2.4-6H21"/>',
+  evenement: '<path d="M6 21V4"/><path d="M6 4.5h11.5l-2.3 3.8 2.3 3.8H6"/>',
+  passee: '<path d="M3.5 12a8.5 8.5 0 1 0 2.7-6.2L3.5 8.5"/><path d="M3.5 3.8v4.7h4.7"/><path d="M12 7.5V12l3 2"/>'
+};
 function renderHome() {
   const root = h('div', { class: 'screen' });
   root.append(topbar('Outil de suivi', h('button', { class: 'btn small ghost', text: '⚙', onclick: function () { go('manage'); } })));
@@ -590,10 +597,13 @@ function renderHome() {
   } else {
     root.append(h('button', { class: 'go', onclick: openGo }, 'GO!', h('small', { text: 'Lancer une séance' })));
   }
-  const qb = function (ico, label, fn) { return h('button', { class: 'btn ghost qbtn', onclick: fn }, h('span', { class: 'qi', text: ico }), h('span', { class: 'ql', text: label })); };
+  const qb = function (ico, label, fn) {
+    const i = h('span', { class: 'qi' }); i.innerHTML = '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[ico] + '</svg>';
+    return h('button', { class: 'btn qbtn', onclick: fn }, i, h('span', { class: 'ql', text: label }));
+  };
   root.append(h('div', { class: 'grid2 quick' },
-    qb('⚖', 'Poids', openWeigh), qb('🏃', 'Autre sport', openSport),
-    qb('📌', 'Événement', openEvent), qb('🕘', 'Séance passée', openPast)));
+    qb('poids', 'Poids', openWeigh), qb('sport', 'Autre sport', openSport),
+    qb('evenement', 'Événement', openEvent), qb('passee', 'Séance passée', openPast)));
   if (!empty) root.append(renderCalendar());
   root.append(renderKpis());
   return root;
