@@ -47,7 +47,7 @@ function dayKey(s) { return String(s || '').toLowerCase().normalize('NFD').repla
 const DAYS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
 const DAY_NAMES = { lun: 'Lundi', mar: 'Mardi', mer: 'Mercredi', jeu: 'Jeudi', ven: 'Vendredi', sam: 'Samedi', dim: 'Dimanche' };
 const GROUPES = ['Pectoraux', 'Dos', 'Épaules', 'Biceps', 'Triceps', 'Quadriceps', 'Ischios', 'Fessiers', 'Mollets', 'Abdos', 'Autre'];
-const VERSION = '1.8.2', VERSION_DATE = '26/11/2026';
+const VERSION = '1.9.0', VERSION_DATE = '26/11/2026';
 const GROUP_COLORS = { 'Pectoraux': '#ef6f6c', 'Dos': '#5b9dff', 'Épaules': '#f5a35b', 'Biceps': '#3ddc97', 'Triceps': '#b18cff', 'Quadriceps': '#4fd1d9', 'Ischios': '#e4c44f', 'Fessiers': '#ff8fc2', 'Mollets': '#8fbf5b', 'Abdos': '#a8b3c7', 'Autre': '#7d8596' };
 function gcolor(g) { return GROUP_COLORS[g] || GROUP_COLORS['Autre']; }
 const THEMES = [['vert', 'Vert', '#3ddc97'], ['bleu', 'Bleu', '#5b9dff'], ['orange', 'Orange', '#ffa24d'], ['violet', 'Violet', '#b18cff'], ['rose', 'Rose', '#ff7eb6'], ['jaune', 'Jaune', '#f2cf4a']];
@@ -1856,6 +1856,12 @@ function tabSettings() {
   wrap.append(h('div', { class: 'card' }, h('h2', { text: 'Apparence' }),
     h('p', { class: 'small muted', text: 'Couleur principale (réglage propre à ce téléphone).' }), sw,
     h('p', { class: 'small muted', style: 'margin-top:12px', text: 'Fond de l\'écran' }), bgs));
+  wrap.append(h('div', { class: 'card' }, h('h2', { text: 'Dashboard PC' }),
+    h('p', { class: 'small muted', text: 'Page complète pour ordinateur (tous les graphiques et tableaux). Ouvre ce lien dans Chrome sur ton PC ; la première fois, colle l\'adresse du moteur et la clé.' }),
+    h('button', { class: 'btn ghost', text: 'Copier le lien du dashboard', onclick: async function () {
+      const u = location.href.split('#')[0].split('?')[0].replace(/[^/]*$/, '') + 'dashboard.html';
+      try { await navigator.clipboard.writeText(u); toast('Lien copié'); } catch (e) { prompt('Copie ce lien', u); }
+    } })));
   wrap.append(h('div', { class: 'card' }, h('h2', { text: 'Partager' }),
     h('p', { class: 'small muted', text: 'Envoie le lien de l\'appli (jamais ton moteur, ta clé ni tes données). Un ami aura besoin de son propre Google Sheet : envoie-lui aussi le guide de mise en place.' }),
     h('button', { class: 'btn ghost', text: '↗ Partager l\'appli', onclick: shareApp })));
