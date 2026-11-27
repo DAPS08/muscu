@@ -47,7 +47,7 @@ function dayKey(s) { return String(s || '').toLowerCase().normalize('NFD').repla
 const DAYS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
 const DAY_NAMES = { lun: 'Lundi', mar: 'Mardi', mer: 'Mercredi', jeu: 'Jeudi', ven: 'Vendredi', sam: 'Samedi', dim: 'Dimanche' };
 const GROUPES = ['Pectoraux', 'Dos', 'Épaules', 'Biceps', 'Triceps', 'Quadriceps', 'Ischios', 'Fessiers', 'Mollets', 'Abdos', 'Autre'];
-const VERSION = '1.11.0', VERSION_DATE = '27/11/2026';
+const VERSION = '1.12.0', VERSION_DATE = '27/11/2026';
 const GROUP_COLORS = { 'Pectoraux': '#ef6f6c', 'Dos': '#5b9dff', 'Épaules': '#f5a35b', 'Biceps': '#3ddc97', 'Triceps': '#b18cff', 'Quadriceps': '#4fd1d9', 'Ischios': '#e4c44f', 'Fessiers': '#ff8fc2', 'Mollets': '#8fbf5b', 'Abdos': '#a8b3c7', 'Autre': '#7d8596' };
 function gcolor(g) { return GROUP_COLORS[g] || GROUP_COLORS['Autre']; }
 const THEMES = [['vert', 'Vert', '#3ddc97'], ['bleu', 'Bleu', '#5b9dff'], ['orange', 'Orange', '#ffa24d'], ['violet', 'Violet', '#b18cff'], ['rose', 'Rose', '#ff7eb6'], ['jaune', 'Jaune', '#f2cf4a']];
@@ -345,12 +345,20 @@ function keepLocal(d) {
   if (!d.activities) d.activities = (S.data && S.data.activities) || [];
   if (!d.events) d.events = (S.data && S.data.events) || [];
 }
+/* Profondeur d'historique chargee dans l'appli : tout par defaut (reglage propre au telephone) */
+const HIST_DEPTHS = [['all', 'Tout', 0], ['24', '2 ans', 24], ['12', '1 an', 12], ['6', '6 mois', 6]];
+function histSince() {
+  const d = HIST_DEPTHS.find(function (x) { return x[0] === LS.get('histDepth', 'all'); });
+  if (!d || !d[2]) return '';
+  const t = new Date(); t.setMonth(t.getMonth() - d[2]);
+  return todayStr(t);
+}
 async function refresh() {
   if (!S.cfg.url || !S.cfg.key) return;
   await flush();
   if (S.outbox.length) return;
   try {
-    const j = await api({ action: 'bootstrap' });
+    const j = await api({ action: 'bootstrap', since: histSince() });
     keepLocal(j.data);
     S.data = j.data;
     LS.set('data', S.data);
@@ -620,7 +628,7 @@ function suggestModel() {
 }
 /* Icones au trait (une seule couleur : la couleur principale choisie) */
 const ICONS = {
-  poids: '<rect x="3.5" y="4" width="17" height="16" rx="4.5"/><path d="M8 10.2a4.2 4.2 0 0 1 8 0"/><path d="M12 10.2l2-2.4"/>',
+  poids: '<circle cx="12" cy="5.8" r="2.3"/><path d="M6.7 20.5h10.6l1.6-9.8a1.2 1.2 0 0 0-1.2-1.4H6.3a1.2 1.2 0 0 0-1.2 1.4z"/>',
   sport: '<path d="M3 12h4l2.2-6 4.2 12 2.4-6H21"/>',
   evenement: '<path d="M6 21V4"/><path d="M6 4.5h11.5l-2.3 3.8 2.3 3.8H6"/>',
   stats: '<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M21 20H3"/>',
@@ -650,15 +658,24 @@ function openMusic() {
   if (/Android/i.test(navigator.userAgent || '')) location.href = musicIntent(a);
   else window.open(musicWeb(a), '_blank', 'noopener');
 }
+/* Logo : si le fichier music/<id>.png existe dans le depot (ajoute par toi), il remplace la note */
+function musicLogo(a, size) {
+  const box = h('span', { class: 'mlogo' });
+  box.innerHTML = icoSvg('musique', size);
+  try {
+    const img = new Image(); img.alt = '';
+    img.onload = function () { box.innerHTML = ''; img.style.width = img.style.height = size + 'px'; box.append(img); };
+    img.src = 'music/' + a[0] + '.png';
+  } catch (e) { /* pas d'image : on garde la note */ }
+  return box;
+}
 function musicBtn() {
   const a = musicApp(); if (!a) return null;
-  const i = h('span', { class: 'qi' }); i.innerHTML = icoSvg('musique', 22);
-  return h('button', { class: 'btn ghost musicbtn', onclick: openMusic }, i, 'Ouvrir ' + a[1]);
+  return h('button', { class: 'btn ghost musicbtn', onclick: openMusic }, h('span', { class: 'qi' }, musicLogo(a, 28)), h('span', { class: 'ql', text: 'Ouvrir ' + a[1] }));
 }
 function musicIconBtn() {
   const a = musicApp(); if (!a) return null;
-  const b = h('button', { class: 'btn small ghost iconbtn', title: 'Ouvrir ' + a[1], 'aria-label': 'Ouvrir ' + a[1], onclick: openMusic });
-  b.innerHTML = icoSvg('musique', 24); return b;
+  return h('button', { class: 'btn small ghost iconbtn', title: 'Ouvrir ' + a[1], 'aria-label': 'Ouvrir ' + a[1], onclick: openMusic }, musicLogo(a, 24));
 }
 
 /* ------------------------------------------------------------------ */
@@ -833,12 +850,50 @@ function calModel(y, m) {
   }
   return days;
 }
+function deleteEntry(table, id, listKey, label) {
+  if (!confirm('Supprimer ' + label + ' ?')) return;
+  S.data[listKey] = (S.data[listKey] || []).filter(function (x) { return x.id !== id; });
+  LS.set('data', S.data);
+  enqueue({ action: 'deleteRow', table: table, id: id });
+  closeModal(); toast('Supprimé');
+  if (S.view === 'home') render();
+  setTimeout(refresh, 1500);
+}
+function deleteSession(x) {
+  if (!confirm('Supprimer cette séance et toutes ses séries ? Les records et statistiques seront recalculés.')) return;
+  S.data.sessions = (S.data.sessions || []).filter(function (y) { return y.id !== x.id; });
+  if (S.active && S.active.id === x.id) { S.active = null; LS.set('active', null); S.drafts = {}; }
+  LS.set('data', S.data);
+  enqueue({ action: 'deleteRow', table: 'seances', id: x.id });
+  closeModal(); toast('Séance supprimée');
+  render();
+  setTimeout(refresh, 1500);
+}
+/* Rouvre une seance terminee pour corriger ses series, sa date, sa duree ou son commentaire */
+async function editSession(id) {
+  if (S.active) { toast('Termine d\'abord la séance en cours'); return; }
+  let j;
+  try { await flush(); j = await api({ action: 'getSession', id: id }); }
+  catch (e) { toast(/inconnue/i.test(e.message || '') ? 'Moteur Google pas à jour : recolle le dernier Code.gs' : 'Connexion nécessaire pour modifier'); return; }
+  const ss = j.data.session, m = MOD(ss.modele);
+  const sets = j.data.sets.map(function (r) { return { id: r.id, ex: r.exercice, numero: r.numero, type: r.type, groupe: r.groupe, ordre: r.ordre, charge: r.charge, reps: r.reps, ts: r.ts, note: r.note }; });
+  const exs = [];
+  (m ? planRows(m.id).map(function (p) { return p.exercice; }) : []).concat(sets.map(function (x) { return x.ex; })).forEach(function (e) { if (exs.indexOf(e) < 0) exs.push(e); });
+  S.active = { id: ss.id, modele: ss.modele, nom: m ? m.nom : 'Séance libre', start: ss.debut, exercises: exs, sets: sets, restStart: null, restTarget: 0, past: true, pastDur: ss.duree || 60, edit: true, origNote: ss.note || '' };
+  S.drafts = {};
+  LS.set('active', S.active);
+  go('session');
+}
 function openDay(d) {
   const dt = new Date(d.k + 'T12:00:00');
   const rows = [];
-  d.sess.forEach(function (x) { const mo = MOD(x.modele); rows.push(h('p', {}, h('b', { text: '🏋 ' + (mo ? mo.nom : 'Séance') }), ' · ' + hhmm(Date.parse(x.debut)) + (x.duree ? ' · ' + x.duree + ' min' : ''))); });
-  d.acts.forEach(function (x) { rows.push(h('p', {}, h('b', { text: '🏃 ' + x.sport }), x.duree !== '' && x.duree !== undefined && x.duree !== null ? ' · ' + x.duree + ' min' : '')); });
-  d.evs.forEach(function (x) { rows.push(h('p', {}, h('b', { text: '📌 ' + x.type }), x.note ? ' · ' + x.note : '')); });
+  const acts = function (x, edit, del) {
+    if (!x.id) return null;
+    return h('div', { class: 'ract' }, h('button', { class: 'btn small ghost', text: 'Modifier', onclick: function () { closeModal(); edit(); } }), h('button', { class: 'btn small ghost', text: 'Supprimer', onclick: del }));
+  };
+  d.sess.forEach(function (x) { const mo = MOD(x.modele); rows.push(h('div', { class: 'dayrow' }, h('p', {}, h('b', { text: '🏋 ' + (mo ? mo.nom : 'Séance') }), ' · ' + hhmm(Date.parse(x.debut)) + (x.duree ? ' · ' + x.duree + ' min' : '')), acts(x, function () { editSession(x.id); }, function () { deleteSession(x); }))); });
+  d.acts.forEach(function (x) { rows.push(h('div', { class: 'dayrow' }, h('p', {}, h('b', { text: '🏃 ' + x.sport }), x.duree !== '' && x.duree !== undefined && x.duree !== null ? ' · ' + x.duree + ' min' : ''), acts(x, function () { openSport(x); }, function () { deleteEntry('activites', x.id, 'activities', 'cette activité'); }))); });
+  d.evs.forEach(function (x) { rows.push(h('div', { class: 'dayrow' }, h('p', {}, h('b', { text: '📌 ' + x.type }), x.note ? ' · ' + x.note : ''), acts(x, function () { openEvent(x); }, function () { deleteEntry('journal', x.id, 'events', 'cet événement'); }))); });
   if (!rows.length) rows.push(h('p', { class: 'muted', text: d.plan.length ? 'Prévu : ' + d.plan.join(', ') + ' · rien enregistré' : 'Rien d\'enregistré.' }));
   else if (d.plan.length && !d.sess.length) rows.push(h('p', { class: 'small muted', text: 'Prévu : ' + d.plan.join(', ') }));
   openModal(h('div', {}, h('h2', { text: dt.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) }),
@@ -1015,7 +1070,19 @@ function openInfos() {
 /* ------------------------------------------------------------------ */
 /* Statistiques                                                        */
 /* ------------------------------------------------------------------ */
-const PERIODS = [['1m', '1 mois', 30], ['3m', '3 mois', 91], ['6m', '6 mois', 182], ['all', 'Tout', 0]];
+function openFromMonth() {
+  const cur = todayStr().slice(0, 7);
+  const inp = h('input', { type: 'month', value: LS.get('stFrom', '') || todayStr(new Date(Date.now() - 365 * 864e5)).slice(0, 7), max: cur });
+  openModal(h('div', {}, h('h2', { text: 'Voir depuis…' }),
+    h('p', { class: 'small muted', text: 'Choisis le mois de départ : les statistiques partent du 1er de ce mois.' }), field('Mois', inp),
+    h('div', { class: 'row' },
+      h('button', { class: 'btn ghost grow', text: 'Annuler', onclick: closeModal }),
+      h('button', { class: 'btn primary grow', text: 'Appliquer', onclick: function () {
+        if (!/^\d{4}-\d{2}$/.test(inp.value)) { toast('Choisis un mois'); return; }
+        LS.set('stFrom', inp.value); S.stPer = 'custom'; LS.set('stPer', 'custom'); closeModal(); render();
+      } }))));
+}
+const PERIODS = [['1m', '1 mois', 30], ['3m', '3 mois', 91], ['6m', '6 mois', 182], ['1a', '1 an', 365], ['2a', '2 ans', 730], ['all', 'Tout', 0]];
 S.stats = LS.get('stats', null);
 S.stTab = S.stTab || 'corps';
 S.stPer = LS.get('stPer', '3m');
@@ -1034,6 +1101,7 @@ async function loadStats() {
   if (S.view === 'stats') render();
 }
 function periodStart() {
+  if (S.stPer === 'custom') { const t = Date.parse(LS.get('stFrom', '') + '-01T00:00:00'); if (!isNaN(t)) return t; }
   const p = PERIODS.find(function (x) { return x[0] === S.stPer; });
   return !p || !p[2] ? 0 : Date.now() - p[2] * 864e5;
 }
@@ -1113,6 +1181,8 @@ function scoreBlock() {
   PERIODS.forEach(function (p) {
     per.append(h('button', { class: 'btn small ' + (S.stPer === p[0] ? 'primary' : 'ghost'), text: p[1], onclick: function () { S.stPer = p[0]; LS.set('stPer', p[0]); render(); } }));
   });
+  const sf = LS.get('stFrom', '');
+  per.append(h('button', { class: 'btn small ' + (S.stPer === 'custom' ? 'primary' : 'ghost'), text: S.stPer === 'custom' && sf ? 'Depuis ' + sf.slice(5, 7) + '/' + sf.slice(0, 4) : 'Depuis…', onclick: openFromMonth }));
   const avg = vals.length ? vals.reduce(function (a, b) { return a + b; }, 0) / vals.length : null;
   const up = vals.filter(function (v) { return v > 0.05; }).length;
   return h('div', { class: 'card' }, h('h2', { text: 'Score global' }),
@@ -1345,6 +1415,8 @@ function renderSession() {
     h('div', { class: 'sb-times' },
       h('span', { id: 't-global', class: 'pill', text: '⏱ 0:00' }),
       h('span', { id: 't-rest', class: 'pill rest', title: 'Toucher pour arrêter le repos', onclick: function () { A.restStart = null; persistActive(); tick(); } }))));
+  if (A.edit) root.append(h('div', { class: 'warnbox editbanner' }, h('b', { text: 'Modification d\'une séance passée' }), h('span', { class: 'small', text: ' · chaque série est enregistrée immédiatement. ' }),
+    h('button', { class: 'btn small ghost', text: 'Quitter', onclick: function () { S.active = null; LS.set('active', null); S.drafts = {}; go('home'); setTimeout(refresh, 800); } })));
   const list = h('div', { id: 'cards' });
   A.exercises.forEach(function (id) { list.append(card(id)); });
   root.append(list);
@@ -1553,7 +1625,35 @@ function tick() {
 /* ------------------------------------------------------------------ */
 /* Fin de seance                                                       */
 /* ------------------------------------------------------------------ */
+function openFinishEdit() {
+  const A = S.active, sets = A.sets;
+  if (!sets.length) {
+    openModal(h('div', {}, h('h2', { text: 'Plus aucune série' }), h('p', { text: 'Supprimer cette séance ?' }),
+      h('div', { class: 'row' },
+        h('button', { class: 'btn ghost grow', text: 'Continuer', onclick: closeModal }),
+        h('button', { class: 'btn danger grow', text: 'Supprimer la séance', onclick: function () { closeModal(); deleteSession({ id: A.id }); } }))));
+    return;
+  }
+  const t0 = new Date(Date.parse(A.start));
+  const date = h('input', { type: 'date', value: todayStr(t0), max: todayStr() });
+  const time = h('input', { type: 'time', value: hhmm(t0.getTime()) });
+  const dur = h('input', { type: 'text', inputmode: 'numeric', value: A.pastDur || 60 });
+  const note = h('textarea', { placeholder: 'Commentaire (optionnel)', value: A.origNote || '' });
+  openModal(h('div', {}, h('h2', { text: 'Enregistrer les modifications' }),
+    h('p', { class: 'small muted', text: sets.length + ' séries. Les séries ajoutées, corrigées ou supprimées sont déjà enregistrées.' }),
+    field('Date', date), field('Heure de début', time), field('Durée (min)', dur), field('Commentaire', note),
+    h('div', { class: 'row' },
+      h('button', { class: 'btn ghost grow', text: 'Continuer', onclick: closeModal }),
+      h('button', { class: 'btn primary grow', text: 'Enregistrer', onclick: function () {
+        const t = Date.parse(date.value + 'T' + (time.value || '18:00'));
+        if (isNaN(t) || t > Date.now()) { toast('Date invalide ou dans le futur'); return; }
+        closeModal();
+        A.start = new Date(t).toISOString();
+        finishSession(new Date(t + Math.max(1, num(dur.value) || 60) * 60000).toISOString(), note.value.trim());
+      } }))));
+}
 function openFinish() {
+  if (S.active && S.active.edit) { openFinishEdit(); return; }
   const A = S.active, sets = A.sets;
   if (!sets.length) {
     openModal(h('div', {},
@@ -1610,12 +1710,13 @@ function openFinish() {
 function finishSession(endIso, note) {
   const A = S.active;
   const dur = Math.max(1, Math.round((Date.parse(endIso) - Date.parse(A.start)) / 60000));
-  S.data.sessions.push({ id: A.id, modele: A.modele, debut: A.start, fin: endIso, duree: dur });
+  S.data.sessions = (S.data.sessions || []).filter(function (x) { return x.id !== A.id; });
+  S.data.sessions.push({ id: A.id, modele: A.modele, debut: A.start, fin: endIso, duree: dur, note: note || '' });
   S.data.sessions.sort(function (a, b) { return Date.parse(a.debut) - Date.parse(b.debut); });
-  applyToHistory(A);
+  if (!A.edit) applyToHistory(A);
   enqueue({ action: 'upsertSession', session: { id: A.id, modele: A.modele, debut: A.start, fin: endIso, duree: dur, statut: 'terminée', note: note || '' } });
   S.active = null; LS.set('active', null); S.drafts = {};
-  S.view = 'home'; render(); toast('Séance terminée · ' + dur + ' min');
+  S.view = 'home'; render(); toast(A.edit ? 'Séance modifiée' : 'Séance terminée · ' + dur + ' min');
   setTimeout(refresh, 1500);
 }
 function cancelSession() {
@@ -1644,32 +1745,42 @@ function checkStale() {
 /* ================================================================== */
 /* Pesee, autre sport, evenement                                       */
 /* ================================================================== */
-function openWeigh() {
-  const date = h('input', { type: 'date', value: todayStr() });
-  const w = h('input', { type: 'text', inputmode: 'decimal', placeholder: 'ex. 78,4' });
-  const mg = h('input', { type: 'text', inputmode: 'decimal', placeholder: 'optionnel' });
-  openModal(h('div', {}, h('h2', { text: 'Poids' }),
+function openWeigh(ed) {
+  ed = ed && ed.id ? ed : null;
+  const date = h('input', { type: 'date', value: ed ? String(ed.date).slice(0, 10) : todayStr() });
+  const w = h('input', { type: 'text', inputmode: 'decimal', placeholder: 'ex. 78,4', value: ed ? fmtN(num(ed.poids)) : '' });
+  const mg = h('input', { type: 'text', inputmode: 'decimal', placeholder: 'optionnel', value: ed && num(ed.mg) !== null ? fmtN(num(ed.mg)) : '' });
+  const hist = [];
+  if (!ed) (S.data.measures || []).slice(-8).reverse().forEach(function (m) {
+    if (!m.id) return;
+    hist.push(h('div', { class: 'dayrow wrow' }, h('span', { text: fmtDateFr(m.date) + ' · ' + fmtN(num(m.poids)) + ' kg' + (num(m.mg) !== null ? ' · ' + fmtN(num(m.mg)) + ' %' : '') }),
+      h('span', { class: 'ract' }, h('button', { class: 'btn small ghost', text: 'Modifier', onclick: function () { closeModal(); openWeigh(m); } }), h('button', { class: 'btn small ghost', text: '✕', 'aria-label': 'Supprimer', onclick: function () { deleteEntry('mesures', m.id, 'measures', 'cette pesée'); } }))));
+  });
+  openModal(h('div', {}, h('h2', { text: ed ? 'Modifier la pesée' : 'Poids' }),
     field('Date', date), field('Poids (kg)', w), field('Masse grasse (%)', mg),
     h('div', { class: 'row' },
       h('button', { class: 'btn ghost grow', text: 'Annuler', onclick: closeModal }),
       h('button', { class: 'btn primary grow', text: 'Enregistrer', onclick: function () {
         const p = num(w.value);
         if (p === null || p <= 0) { toast('Poids requis'); return; }
-        const row = { id: uid(), date: date.value || todayStr(), poids: p, mg: num(mg.value) === null ? '' : num(mg.value) };
-        S.data.measures.push({ date: row.date, poids: p, mg: num(mg.value) });
+        const row = { id: ed ? ed.id : uid(), date: date.value || todayStr(), poids: p, mg: num(mg.value) === null ? '' : num(mg.value) };
+        if (ed) S.data.measures = S.data.measures.filter(function (x) { return x.id !== ed.id; });
+        S.data.measures.push({ id: row.id, date: row.date, poids: p, mg: num(mg.value) });
         S.data.measures.sort(function (a, b) { return Date.parse(a.date) - Date.parse(b.date); });
         LS.set('data', S.data);
         enqueue({ action: 'append', table: 'mesures', rows: [row] });
-        closeModal(); if (S.view === 'home') render(); toast('Poids enregistré');
-      } }))));
+        closeModal(); if (S.view === 'home') render(); toast(ed ? 'Pesée modifiée' : 'Poids enregistré');
+      } })),
+    hist.length ? h('div', { class: 'histbox' }, h('h3', { text: 'Dernières pesées' }), hist) : null));
 }
-function openSport() {
+function openSport(ed) {
+  ed = ed && ed.id ? ed : null;
   const sports = LS.get('sports', ['Course', 'Vélo', 'Natation', 'Football', 'Marche']);
-  const date = h('input', { type: 'date', value: todayStr() });
-  const sp = h('input', { type: 'text', list: 'sports-list', placeholder: 'ex. Course' });
-  const dur = h('input', { type: 'text', inputmode: 'numeric', placeholder: 'minutes' });
-  const note = h('textarea', { placeholder: 'Commentaire (optionnel)' });
-  openModal(h('div', {}, h('h2', { text: 'Autre sport' }),
+  const date = h('input', { type: 'date', value: ed ? String(ed.date).slice(0, 10) : todayStr() });
+  const sp = h('input', { type: 'text', list: 'sports-list', placeholder: 'ex. Course', value: ed ? ed.sport : '' });
+  const dur = h('input', { type: 'text', inputmode: 'numeric', placeholder: 'minutes', value: ed && ed.duree !== '' && ed.duree !== null && ed.duree !== undefined ? ed.duree : '' });
+  const note = h('textarea', { placeholder: 'Commentaire (optionnel)', value: ed ? ed.note || '' : '' });
+  openModal(h('div', {}, h('h2', { text: ed ? 'Modifier l\'activité' : 'Autre sport' }),
     h('datalist', { id: 'sports-list' }, sports.map(function (s) { return h('option', { value: s }); })),
     field('Date', date), field('Sport', sp), field('Durée (min)', dur), field('Commentaire', note),
     h('div', { class: 'row' },
@@ -1678,26 +1789,29 @@ function openSport() {
         const name = sp.value.trim();
         if (!name) { toast('Sport requis'); return; }
         if (sports.indexOf(name) < 0) { sports.push(name); LS.set('sports', sports); }
-        enqueue({ action: 'append', table: 'activites', rows: [{ id: uid(), date: date.value || todayStr(), sport: name, duree: num(dur.value) === null ? '' : num(dur.value), note: note.value.trim() }] });
-        (S.data.activities = S.data.activities || []).push({ date: date.value || todayStr(), sport: name, duree: num(dur.value) === null ? '' : num(dur.value) }); LS.set('data', S.data);
-        closeModal(); toast('Activité enregistrée'); if (S.view === 'home') render();
+        const aid = ed ? ed.id : uid(), ad = { id: aid, date: date.value || todayStr(), sport: name, duree: num(dur.value) === null ? '' : num(dur.value), note: note.value.trim() };
+        enqueue({ action: 'append', table: 'activites', rows: [ad] });
+        S.data.activities = (S.data.activities || []).filter(function (x) { return x.id !== aid; }); S.data.activities.push(ad); LS.set('data', S.data);
+        closeModal(); toast(ed ? 'Activité modifiée' : 'Activité enregistrée'); if (S.view === 'home') render();
       } }))));
 }
-function openEvent() {
-  const type = h('select', {}, opts(EVENTS, 'Malade'));
-  const d1 = h('input', { type: 'date', value: todayStr() });
-  const d2 = h('input', { type: 'date', value: '' });
-  const note = h('textarea', { placeholder: 'Note (optionnel)' });
-  openModal(h('div', {}, h('h2', { text: 'Événement' }),
+function openEvent(ed) {
+  ed = ed && ed.id ? ed : null;
+  const type = h('select', {}, opts(EVENTS, ed ? ed.type : 'Malade'));
+  const d1 = h('input', { type: 'date', value: ed ? String(ed.debut).slice(0, 10) : todayStr() });
+  const d2 = h('input', { type: 'date', value: ed && String(ed.fin).slice(0, 10) !== String(ed.debut).slice(0, 10) ? String(ed.fin).slice(0, 10) : '' });
+  const note = h('textarea', { placeholder: 'Note (optionnel)', value: ed ? ed.note || '' : '' });
+  openModal(h('div', {}, h('h2', { text: ed ? 'Modifier l\'événement' : 'Événement' }),
     h('p', { class: 'small muted', text: 'Malade ou blessure : ces semaines ne comptent pas dans les alertes de stagnation.' }),
     field('Type', type), field('Du', d1), field('Au (optionnel)', d2), field('Note', note),
     h('div', { class: 'row' },
       h('button', { class: 'btn ghost grow', text: 'Annuler', onclick: closeModal }),
       h('button', { class: 'btn primary grow', text: 'Enregistrer', onclick: function () {
         const a = d1.value || todayStr();
-        enqueue({ action: 'append', table: 'journal', rows: [{ id: uid(), debut: a, fin: d2.value || a, type: type.value, note: note.value.trim() }] });
-        (S.data.events = S.data.events || []).push({ debut: a, fin: d2.value || a, type: type.value, note: note.value.trim() }); LS.set('data', S.data);
-        closeModal(); toast('Événement enregistré'); if (S.view === 'home') render();
+        const eid = ed ? ed.id : uid(), ev = { id: eid, debut: a, fin: d2.value || a, type: type.value, note: note.value.trim() };
+        enqueue({ action: 'append', table: 'journal', rows: [ev] });
+        S.data.events = (S.data.events || []).filter(function (x) { return x.id !== eid; }); S.data.events.push(ev); LS.set('data', S.data);
+        closeModal(); toast(ed ? 'Événement modifié' : 'Événement enregistré'); if (S.view === 'home') render();
       } }))));
 }
 
@@ -2010,6 +2124,13 @@ function tabSettings() {
   });
   wrap.append(h('div', { class: 'card' }, h('h2', { text: 'Musique' }),
     h('p', { class: 'small muted', text: 'Choisis ton appli : un bouton apparaît sous le calendrier et dans la barre de séance pour l\'ouvrir (réglage propre à ce téléphone). Si l\'appli n\'est pas installée, la version web s\'ouvre.' }), mus));
+  const curDepth = LS.get('histDepth', 'all');
+  const dep = h('div', { class: 'chips' });
+  HIST_DEPTHS.forEach(function (d) {
+    dep.append(h('button', { class: 'btn small ' + (curDepth === d[0] ? 'primary' : 'ghost'), text: d[1], onclick: function () { LS.set('histDepth', d[0]); toast('Historique : ' + d[1]); refresh().then(function () { render(); }); } }));
+  });
+  wrap.append(h('div', { class: 'card' }, h('h2', { text: 'Historique chargé' }),
+    h('p', { class: 'small muted', text: 'Jusqu\'où l\'appli remonte dans le calendrier et les pesées. « Tout » va aussi loin que tes données (recommandé). Réduire accélère l\'ouverture si tu as des années d\'historique. Les statistiques, elles, regardent toujours tout.' }), dep));
   const exBtn = h('button', { class: 'btn ghost', text: 'Exporter mes données (.zip de CSV)' });
   exBtn.addEventListener('click', function () { exportCsv(exBtn); });
   wrap.append(h('div', { class: 'card' }, h('h2', { text: 'Sauvegarde et export' }),
@@ -2091,6 +2212,6 @@ function init() {
   checkStale();
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(function () {});
 }
-window.__muscu = { seedCatalog: seedCatalog, openPast: openPast, applyTheme: applyTheme, applyMode: applyMode, musicIntent: musicIntent, MUSIC_APPS: MUSIC_APPS, buildExport: buildExport, zipStore: zipStore, crc32: crc32, calModel: calModel, renderCalendar: renderCalendar, startRest: startRest, updateApp: updateApp, applyBg: applyBg, shareApp: shareApp, exList: exList, S: S, render: render, flush: flush, refresh: refresh, startSession: startSession, validateSet: validateSet, startDrop: startDrop, startTest: startTest, finishSession: finishSession, openFinish: openFinish, openGo: openGo, seedExample: seedExample, tick: tick, checkStale: checkStale, getDraft: getDraft, activeModels: activeModels, suggestModel: suggestModel };
+window.__muscu = { seedCatalog: seedCatalog, openPast: openPast, applyTheme: applyTheme, applyMode: applyMode, musicIntent: musicIntent, deleteEntry: deleteEntry, deleteSession: deleteSession, editSession: editSession, histSince: histSince, openDay: openDay, openSport: openSport, openEvent: openEvent, openWeigh: openWeigh, MUSIC_APPS: MUSIC_APPS, buildExport: buildExport, zipStore: zipStore, crc32: crc32, calModel: calModel, renderCalendar: renderCalendar, startRest: startRest, updateApp: updateApp, applyBg: applyBg, shareApp: shareApp, exList: exList, S: S, render: render, flush: flush, refresh: refresh, startSession: startSession, validateSet: validateSet, startDrop: startDrop, startTest: startTest, finishSession: finishSession, openFinish: openFinish, openGo: openGo, seedExample: seedExample, tick: tick, checkStale: checkStale, getDraft: getDraft, activeModels: activeModels, suggestModel: suggestModel };
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

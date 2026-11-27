@@ -258,3 +258,20 @@ html[data-mode=light][data-bg=degrade] body,html[data-mode=light]:not([data-bg])
 .btn.musicbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin:0 0 12px;min-height:50px}
 .btn.musicbtn .qi{display:inline-flex;color:var(--accent)}
 .sessionbar .row>.iconbtn{width:40px;height:40px}
+
+/* --- v1.12 : tuiles (icone separee par un trait), modifier / supprimer --- */
+.btn.qbtn{padding:0;gap:0;overflow:hidden;align-items:stretch;justify-content:flex-start;min-height:56px}
+.qbtn .qi,.btn.musicbtn .qi{display:flex;align-items:center;justify-content:center;width:54px;flex:none;color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--card2));border-right:1.5px solid var(--edge)}
+.qbtn .ql,.btn.musicbtn .ql{display:flex;align-items:center;padding:0 12px;font-size:.98rem;font-weight:700;text-align:left;line-height:1.15}
+.btn.musicbtn{padding:0;gap:0;overflow:hidden;align-items:stretch;justify-content:flex-start;width:100%;margin:0 0 12px;min-height:54px}
+.mlogo{display:inline-flex;align-items:center;justify-content:center}
+.mlogo img{display:block;object-fit:contain;border-radius:6px}
+.dayrow{padding:6px 0;border-bottom:1px solid var(--line)}
+.dayrow:last-child{border-bottom:0}
+.dayrow p{margin:0}
+.ract{display:flex;gap:8px;margin-top:6px}
+.wrow{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.wrow .ract{margin-top:0}
+.histbox{margin-top:16px;border-top:1px solid var(--line);padding-top:8px}
+.histbox h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px}
+.editbanner{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px}
