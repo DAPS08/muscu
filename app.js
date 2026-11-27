@@ -47,7 +47,7 @@ function dayKey(s) { return String(s || '').toLowerCase().normalize('NFD').repla
 const DAYS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
 const DAY_NAMES = { lun: 'Lundi', mar: 'Mardi', mer: 'Mercredi', jeu: 'Jeudi', ven: 'Vendredi', sam: 'Samedi', dim: 'Dimanche' };
 const GROUPES = ['Pectoraux', 'Dos', 'Épaules', 'Biceps', 'Triceps', 'Quadriceps', 'Ischios', 'Fessiers', 'Mollets', 'Abdos', 'Autre'];
-const VERSION = '1.7.0', VERSION_DATE = '26/11/2026';
+const VERSION = '1.8.0', VERSION_DATE = '26/11/2026';
 const GROUP_COLORS = { 'Pectoraux': '#ef6f6c', 'Dos': '#5b9dff', 'Épaules': '#f5a35b', 'Biceps': '#3ddc97', 'Triceps': '#b18cff', 'Quadriceps': '#4fd1d9', 'Ischios': '#e4c44f', 'Fessiers': '#ff8fc2', 'Mollets': '#8fbf5b', 'Abdos': '#a8b3c7', 'Autre': '#7d8596' };
 function gcolor(g) { return GROUP_COLORS[g] || GROUP_COLORS['Autre']; }
 const THEMES = [['vert', 'Vert', '#3ddc97'], ['bleu', 'Bleu', '#5b9dff'], ['orange', 'Orange', '#ffa24d'], ['violet', 'Violet', '#b18cff'], ['rose', 'Rose', '#ff7eb6'], ['jaune', 'Jaune', '#f2cf4a']];
@@ -507,6 +507,7 @@ function render() {
   else if (S.view === 'stats') node = renderStats();
   else { S.view = 'home'; node = renderHome(); }
   root.append(node);
+  syncHistory();
   renderBadge();
   tick();
 }
@@ -517,6 +518,40 @@ function topbar(title, left) {
     h('span', { id: 'badge', class: 'badge', onclick: function () { refresh(); } }, '…'));
 }
 function go(view) { S.view = view; render(); window.scrollTo(0, 0); if (view === 'stats') loadStats(); }
+/* Bouton maison (toutes les pages sauf l'accueil) */
+function homeBtn() {
+  const b = h('button', { class: 'btn small ghost homebtn', 'aria-label': 'Accueil', title: 'Accueil', onclick: goHome });
+  b.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11.2 12 4l8.5 7.2"/><path d="M5.8 9.8V20h12.4V9.8"/><path d="M10 20v-5.5h4V20"/></svg>';
+  return b;
+}
+function goHome() {
+  if (window.history.state && window.history.state.sub) { window.history.back(); return; }
+  go('home');
+}
+/* Geste retour : le retour du telephone (ou un glissement vers la droite) ramene a l'accueil */
+function syncHistory() {
+  try {
+    const sub = S.view !== 'home' && S.view !== 'setup';
+    const has = !!(window.history.state && window.history.state.sub);
+    if (sub && !has) window.history.pushState({ sub: 1 }, '');
+    else if (!sub && has) window.history.back();
+  } catch (e) {}
+}
+window.addEventListener('popstate', function () {
+  if (S.view !== 'home' && S.view !== 'setup') { closeModal(); S.view = 'home'; render(); window.scrollTo(0, 0); }
+});
+(function () {
+  let x0 = 0, y0 = 0, t0 = 0, ok = false;
+  document.addEventListener('touchstart', function (e) {
+    const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now();
+    ok = (S.view === 'stats' || S.view === 'manage') && $('modal').hidden && !(e.target.closest && e.target.closest('.tabs,.wbars,input,select,textarea,.chips'));
+  }, { passive: true });
+  document.addEventListener('touchend', function (e) {
+    if (!ok) return; ok = false;
+    const t = e.changedTouches[0], dx = t.clientX - x0, dy = Math.abs(t.clientY - y0);
+    if (dx > 80 && dy < 55 && dx > dy * 2 && Date.now() - t0 < 700) goHome();
+  }, { passive: true });
+})();
 
 /* ------------------------------------------------------------------ */
 /* Connexion au moteur                                                 */
@@ -743,8 +778,14 @@ function renderKpis() {
   } else {
     wrap.append(h('div', { class: 'rep', onclick: openWeigh }, h('div', { class: 'rl' }, h('span', { class: 'rk', text: 'Corps' })), h('p', { class: 'small muted', text: 'Aucune pesée : touche pour en ajouter une.' })));
   }
-  const goals = (S.data.config.objectifs || []).map(function (o) { return goalView(o); }).filter(Boolean);
-  if (goals.length) { wrap.append(h('h3', { class: 'rk2', text: 'Objectifs' })); goals.forEach(function (g) { wrap.append(g); }); }
+  const gg = goalGroups(S.data.config.objectifs || []);
+  if (gg.length) {
+    wrap.append(h('h3', { class: 'rk2', text: 'Objectifs' }));
+    gg.forEach(function (grp) {
+      if (gg.length > 1) wrap.append(h('div', { class: 'gcat', text: grp.cat }));
+      grp.items.forEach(function (g) { wrap.append(goalRow(g)); });
+    });
+  }
   if (H.prs && H.prs.length) {
     wrap.append(h('h3', { class: 'rk2', text: 'Derniers records' }));
     H.prs.slice(0, 2).forEach(function (p) {
@@ -756,25 +797,45 @@ function renderKpis() {
   }
   return wrap;
 }
-function goalView(o) {
+function goalStats(o) {
   const dep = num(o.depart), cib = num(o.cible);
   if (dep === null || cib === null || dep === cib) return null;
-  let cur = null, label = '', unit = '';
+  let cur = null, label = '', unit = '', cat = '';
   const lastM = (S.data.measures || []).slice().reverse();
-  if (o.type === '1RM') { const b = S.data.history.best[o.exercice]; cur = b ? b.e : null; label = '1RM ' + exName(o.exercice); unit = ' kg'; }
-  else if (o.type === 'poids') { const m = lastM.find(function (x) { return num(x.poids) !== null; }); cur = m ? num(m.poids) : null; label = 'Poids'; unit = ' kg'; }
-  else if (o.type === 'mg') { const m = lastM.find(function (x) { return num(x.mg) !== null; }); cur = m ? num(m.mg) : null; label = 'Masse grasse'; unit = ' %'; }
+  if (o.type === '1RM') { const b = S.data.history.best[o.exercice]; cur = b ? b.e : null; label = '1RM ' + exName(o.exercice); unit = ' kg'; cat = 'Performances'; }
+  else if (o.type === 'poids') { const m = lastM.find(function (x) { return num(x.poids) !== null; }); cur = m ? num(m.poids) : null; label = 'Poids'; unit = ' kg'; cat = 'Poids'; }
+  else if (o.type === 'mg') { const m = lastM.find(function (x) { return num(x.mg) !== null; }); cur = m ? num(m.mg) : null; label = 'Masse grasse'; unit = ' %'; cat = 'Masse grasse'; }
   else return null;
   if (cur === null) cur = dep;
   const pct = Math.max(0, Math.min(1, (cur - dep) / (cib - dep)));
   const left = Math.max(0, (cib - cur) * (cib > dep ? 1 : -1));
-  let when = '';
-  if (o.dcible) { const d = Math.ceil((Date.parse(o.dcible) - Date.now()) / 864e5); when = d >= 0 ? ' · J-' + d : ' · échéance dépassée'; }
-  return h('div', { class: 'goal' },
-    h('div', { class: 't' }, h('span', { text: label }), h('span', { text: fmtN(cur) + ' / ' + fmtN(cib) + unit })),
-    h('div', { class: 'bar' }, h('i', { style: 'width:' + Math.round(pct * 100) + '%' })),
-    h('div', { class: 'small muted', text: Math.round(pct * 100) + ' % · encore ' + fmtN(left) + unit + when }));
+  const days = o.dcible ? Math.ceil((Date.parse(o.dcible) - Date.now()) / 864e5) : null;
+  return { o: o, cur: cur, cib: cib, pct: pct, left: left, label: label, unit: unit, cat: cat, days: isNaN(days) ? null : days };
 }
+const GOAL_CATS = ['Poids', 'Masse grasse', 'Performances'];
+/* Objectifs ranges par categorie, puis par echeance la plus proche, puis par avancement */
+function goalGroups(list) {
+  const items = list.map(goalStats).filter(Boolean), out = [];
+  GOAL_CATS.forEach(function (c) {
+    const g = items.filter(function (x) { return x.cat === c; });
+    if (!g.length) return;
+    g.sort(function (a, b) {
+      const da = a.days === null ? 1e9 : a.days, db = b.days === null ? 1e9 : b.days;
+      return da - db || b.pct - a.pct;
+    });
+    out.push({ cat: c, items: g });
+  });
+  return out;
+}
+function goalRow(g) {
+  let when = '';
+  if (g.days !== null) when = g.days >= 0 ? ' · J-' + g.days : ' · échéance dépassée';
+  return h('div', { class: 'goal' },
+    h('div', { class: 't' }, h('span', { text: g.label }), h('span', { text: fmtN(g.cur) + ' / ' + fmtN(g.cib) + g.unit })),
+    h('div', { class: 'bar' }, h('i', { style: 'width:' + Math.round(g.pct * 100) + '%' })),
+    h('div', { class: 'small muted', text: Math.round(g.pct * 100) + ' % · encore ' + fmtN(g.left) + g.unit + when }));
+}
+function goalView(o) { const g = goalStats(o); return g ? goalRow(g) : null; }
 
 /* ------------------------------------------------------------------ */
 /* Infos perso                                                         */
@@ -921,7 +982,7 @@ function scoreBlock() {
 }
 function renderStats() {
   const root = h('div', { class: 'screen' });
-  root.append(topbar('Statistiques', h('button', { class: 'btn small ghost', text: '‹', onclick: function () { go('home'); } })));
+  root.append(topbar('Statistiques', homeBtn()));
   if (S.statsErr === 'maj') root.append(h('div', { class: 'warnbox', text: 'Le moteur Google n\'a pas encore la mise à jour des statistiques : colle la nouvelle version de Code.gs et redéploie (voir le guide). Les courbes de poids fonctionnent déjà.' }));
   else if (S.statsErr) root.append(h('p', { class: 'small muted', text: 'Hors ligne : dernières données connues.' }));
   root.append(scoreBlock());
@@ -1139,7 +1200,7 @@ function renderSession() {
   const A = S.active;
   const root = h('div', { class: 'screen' });
   root.append(h('div', { class: 'sessionbar' },
-    h('div', { class: 'row' }, h('div', { class: 'sb-title', text: A.nom }), h('span', { id: 'badge', class: 'badge', onclick: function () { flush(); } }, '…')),
+    h('div', { class: 'row' }, homeBtn(), h('div', { class: 'sb-title grow', text: A.nom }), h('span', { id: 'badge', class: 'badge', onclick: function () { flush(); } }, '…')),
     h('div', { class: 'sb-times' },
       h('span', { id: 't-global', class: 'pill', text: '⏱ 0:00' }),
       h('span', { id: 't-rest', class: 'pill rest', title: 'Toucher pour arrêter le repos', onclick: function () { A.restStart = null; persistActive(); tick(); } }))));
@@ -1504,7 +1565,7 @@ function openEvent() {
 /* ================================================================== */
 function renderManage() {
   const root = h('div', { class: 'screen' });
-  root.append(topbar('Gérer', h('button', { class: 'btn small ghost', text: '‹', onclick: function () { go(S.active ? 'session' : 'home'); } })));
+  root.append(topbar('Paramétrage', homeBtn()));
   const tabs = [['ex', 'Exercices'], ['seances', 'Séances'], ['obj', 'Objectifs'], ['reg', 'Réglages']];
   root.append(h('div', { class: 'tabs' }, tabs.map(function (t) {
     return h('button', { class: 'btn' + (S.tab === t[0] ? ' on' : ''), text: t[1], onclick: function () { S.tab = t[0]; render(); } });
@@ -1586,6 +1647,7 @@ function exerciseForm(ex) {
 }
 
 /* --- Seances et programmes --- */
+const PROG_COLORS = ['#3ddc97', '#5b9dff', '#f5a35b', '#b18cff', '#ef6f6c', '#4fd1d9', '#e4c44f', '#ff8fc2'];
 function tabSessions() {
   const wrap = h('div', {});
   const progs = S.data.config.programmes || [];
@@ -1596,14 +1658,15 @@ function tabSessions() {
     const isAct = String(p.actif).toLowerCase() === 'oui';
     const models = (S.data.config.modeles || []).filter(function (m) { return m.programme === p.id; })
       .sort(function (a, b) { return (num(a.ordre) || 0) - (num(b.ordre) || 0); });
-    const c = h('div', { class: 'card' },
-      h('h2', {}, h('span', { text: p.nom }), isAct ? h('span', { class: 'small', style: 'color:var(--accent)', text: 'actif' }) : h('button', { class: 'btn small ghost', text: 'Activer', onclick: function () {
+    const pc = PROG_COLORS[progs.indexOf(p) % PROG_COLORS.length];
+    const c = h('div', { class: 'card progcard' + (isAct ? ' act' : ''), style: '--pc:' + pc },
+      h('div', { class: 'phead' }, h('span', { class: 'pname', text: p.nom }), isAct ? h('span', { class: 'pbadge', text: 'actif' }) : h('button', { class: 'btn small ghost', text: 'Activer', onclick: function () {
         progs.forEach(function (x) { x.actif = x.id === p.id ? 'oui' : 'non'; }); saveConfig('programmes'); render();
       } })));
     const list = h('div', { class: 'list' });
     models.forEach(function (m, i) {
       list.append(h('div', { class: 'item' },
-        h('span', { onclick: function () { planEditor(m); } }, m.nom, m.jour ? h('span', { class: 'small muted', text: ' · ' + (DAY_NAMES[dayKey(m.jour)] || m.jour) }) : null),
+        h('span', { onclick: function () { planEditor(m); } }, h('b', { text: m.nom }), m.jour ? h('span', { class: 'small muted', text: ' · ' + (DAY_NAMES[dayKey(m.jour)] || m.jour) }) : null),
         h('span', { class: 'row' },
           h('button', { class: 'btn small ghost', text: '↑', onclick: function () { moveModel(models, i, -1); } }),
           h('button', { class: 'btn small ghost', text: '↓', onclick: function () { moveModel(models, i, 1); } }),
@@ -1708,13 +1771,19 @@ function tabGoals() {
   wrap.append(h('div', { class: 'row', style: 'margin-bottom:10px' }, h('button', { class: 'btn primary grow', text: '+ Objectif', onclick: function () { goalForm(); } })));
   const goals = S.data.config.objectifs || [];
   if (!goals.length) wrap.append(h('p', { class: 'muted', text: 'Fixe un objectif de 1RM, de poids ou de masse grasse : sa progression s\'affiche sur l\'accueil.' }));
-  goals.forEach(function (o) {
-    const v = goalView(o);
-    wrap.append(h('div', { class: 'card' }, v || h('div', { text: 'Objectif incomplet' }),
-      h('div', { class: 'row' }, h('button', { class: 'btn small ghost', text: 'Supprimer', onclick: function () {
-        if (!confirm('Supprimer cet objectif ?')) return;
-        S.data.config.objectifs = goals.filter(function (x) { return x !== o; }); saveConfig('objectifs'); render();
-      } }))));
+  goalGroups(goals).forEach(function (grp) {
+    wrap.append(h('div', { class: 'gcat', text: grp.cat }));
+    grp.items.forEach(function (g) {
+      wrap.append(h('div', { class: 'card' }, goalRow(g),
+        h('div', { class: 'row' }, h('button', { class: 'btn small ghost', text: 'Supprimer', onclick: function () {
+          if (!confirm('Supprimer cet objectif ?')) return;
+          S.data.config.objectifs = goals.filter(function (x) { return x !== g.o; }); saveConfig('objectifs'); render();
+        } }))));
+    });
+  });
+  goals.filter(function (o) { return !goalStats(o); }).forEach(function (o) {
+    wrap.append(h('div', { class: 'card' }, h('div', { text: 'Objectif incomplet' }),
+      h('div', { class: 'row' }, h('button', { class: 'btn small ghost', text: 'Supprimer', onclick: function () { S.data.config.objectifs = goals.filter(function (x) { return x !== o; }); saveConfig('objectifs'); render(); } }))));
   });
   return wrap;
 }

@@ -205,3 +205,21 @@ h3.rk2{margin:16px 0 8px;font-size:1rem}
 .wb i.ok{background:var(--accent);border-color:var(--accent)}
 .wb .wv{font-size:.72rem;color:var(--muted);margin-bottom:2px}
 .wb .wl{position:absolute;bottom:-15px;font-size:.62rem;color:var(--muted);white-space:nowrap}
+
+/* --- v1.8 : contours, maison, programmes, objectifs --- */
+:root{--edge:color-mix(in srgb,var(--accent) 26%,#444c5c)}
+.card{border:1.5px solid var(--edge);box-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 3px 10px rgba(0,0,0,.28)}
+.tile,.rep{border:1.5px solid var(--edge)}
+.btn.qbtn{border:1.5px solid var(--edge);box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.item,.gcard,.recline{border-color:var(--edge)}
+.gcard{border:1.5px solid var(--edge)}
+.homebtn{display:inline-flex;align-items:center;justify-content:center;color:var(--accent);padding:7px 10px}
+.homebtn svg{display:block}
+.sessionbar .homebtn{margin-right:8px}
+.sessionbar .sb-title.grow{flex:1}
+.card.progcard{border-left:6px solid var(--pc);padding-top:0;overflow:hidden}
+.progcard .phead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 -14px 12px;padding:13px 14px;background:color-mix(in srgb,var(--pc) 16%,var(--card2));border-bottom:1.5px solid color-mix(in srgb,var(--pc) 55%,transparent)}
+.progcard .pname{font-size:1.2rem;font-weight:800}
+.progcard .pbadge{font-size:.78rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent-ink);background:var(--pc);border-radius:99px;padding:3px 10px}
+.progcard:not(.act) .pname{opacity:.85}
+.gcat{margin:16px 0 8px;font-size:.8rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent)}
