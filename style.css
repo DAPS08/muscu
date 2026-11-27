@@ -90,7 +90,7 @@ textarea{min-height:70px}
 .swatch.on{outline:3px solid var(--text);outline-offset:1px}
 
 /* fonds (choix dans Reglages > Apparence) */
-html[data-bg=points] body,{}
+html[data-bg=points] body{background-image:radial-gradient(rgba(255,255,255,.13) 1.3px,transparent 1.6px);background-size:18px 18px}
 html[data-bg=grille] body{background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:24px 24px}
 html[data-bg=diagonales] body{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.035) 0 2px,transparent 2px 14px)}
 html[data-bg=degrade] body,html:not([data-bg]) body{background-image:radial-gradient(rgba(255,255,255,.13) 1.3px,transparent 1.6px),linear-gradient(180deg,var(--accent-glow) 0,rgba(0,0,0,0) 1300px);background-size:18px 18px,100% 1300px;background-repeat:repeat,no-repeat;background-position:0 0,0 0}
