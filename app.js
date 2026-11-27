@@ -47,7 +47,7 @@ function dayKey(s) { return String(s || '').toLowerCase().normalize('NFD').repla
 const DAYS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
 const DAY_NAMES = { lun: 'Lundi', mar: 'Mardi', mer: 'Mercredi', jeu: 'Jeudi', ven: 'Vendredi', sam: 'Samedi', dim: 'Dimanche' };
 const GROUPES = ['Pectoraux', 'Dos', 'Épaules', 'Biceps', 'Triceps', 'Quadriceps', 'Ischios', 'Fessiers', 'Mollets', 'Abdos', 'Autre'];
-const VERSION = '1.8.0', VERSION_DATE = '26/11/2026';
+const VERSION = '1.8.2', VERSION_DATE = '26/11/2026';
 const GROUP_COLORS = { 'Pectoraux': '#ef6f6c', 'Dos': '#5b9dff', 'Épaules': '#f5a35b', 'Biceps': '#3ddc97', 'Triceps': '#b18cff', 'Quadriceps': '#4fd1d9', 'Ischios': '#e4c44f', 'Fessiers': '#ff8fc2', 'Mollets': '#8fbf5b', 'Abdos': '#a8b3c7', 'Autre': '#7d8596' };
 function gcolor(g) { return GROUP_COLORS[g] || GROUP_COLORS['Autre']; }
 const THEMES = [['vert', 'Vert', '#3ddc97'], ['bleu', 'Bleu', '#5b9dff'], ['orange', 'Orange', '#ffa24d'], ['violet', 'Violet', '#b18cff'], ['rose', 'Rose', '#ff7eb6'], ['jaune', 'Jaune', '#f2cf4a']];
@@ -520,7 +520,7 @@ function topbar(title, left) {
 function go(view) { S.view = view; render(); window.scrollTo(0, 0); if (view === 'stats') loadStats(); }
 /* Bouton maison (toutes les pages sauf l'accueil) */
 function homeBtn() {
-  const b = h('button', { class: 'btn small ghost homebtn', 'aria-label': 'Accueil', title: 'Accueil', onclick: goHome });
+  const b = h('button', { class: 'btn small ghost iconbtn homebtn', 'aria-label': 'Accueil', title: 'Accueil', onclick: goHome });
   b.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11.2 12 4l8.5 7.2"/><path d="M5.8 9.8V20h12.4V9.8"/><path d="M10 20v-5.5h4V20"/></svg>';
   return b;
 }
@@ -618,7 +618,7 @@ const ICONS = {
 };
 function renderHome() {
   const root = h('div', { class: 'screen' });
-  root.append(topbar('Outil de suivi', h('button', { class: 'btn small ghost', text: '⚙', onclick: function () { go('manage'); } })));
+  root.append(topbar('Outil de suivi', h('button', { class: 'btn small ghost iconbtn', 'aria-label': 'Paramétrage', text: '⚙', onclick: function () { go('manage'); } })));
   const empty = !(S.data.config.modeles || []).length;
   if (S.active) {
     root.append(h('div', { class: 'card' },
@@ -1660,8 +1660,8 @@ function tabSessions() {
       .sort(function (a, b) { return (num(a.ordre) || 0) - (num(b.ordre) || 0); });
     const pc = PROG_COLORS[progs.indexOf(p) % PROG_COLORS.length];
     const c = h('div', { class: 'card progcard' + (isAct ? ' act' : ''), style: '--pc:' + pc },
-      h('div', { class: 'phead' }, h('span', { class: 'pname', text: p.nom }), isAct ? h('span', { class: 'pbadge', text: 'actif' }) : h('button', { class: 'btn small ghost', text: 'Activer', onclick: function () {
-        progs.forEach(function (x) { x.actif = x.id === p.id ? 'oui' : 'non'; }); saveConfig('programmes'); render();
+      h('div', { class: 'phead' }, h('span', { class: 'pname', text: p.nom }), h('button', { class: 'pbadge ' + (isAct ? 'on' : 'off'), 'aria-pressed': isAct ? 'true' : 'false', text: isAct ? 'Actif' : 'Inactif', onclick: function () {
+        p.actif = isAct ? 'non' : 'oui'; saveConfig('programmes'); render();
       } })));
     const list = h('div', { class: 'list' });
     models.forEach(function (m, i) {

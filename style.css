@@ -223,3 +223,17 @@ h3.rk2{margin:16px 0 8px;font-size:1rem}
 .progcard .pbadge{font-size:.78rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent-ink);background:var(--pc);border-radius:99px;padding:3px 10px}
 .progcard:not(.act) .pname{opacity:.85}
 .gcat{margin:16px 0 8px;font-size:.8rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent)}
+
+/* --- v1.8.1 : boutons d'en-tete identiques, tuiles compactes --- */
+.btn.iconbtn{width:44px;height:44px;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;flex:none;font-size:1.35rem;line-height:1;color:var(--accent)}
+.btn.iconbtn svg{width:24px;height:24px}
+.btn.qbtn{flex-direction:row;gap:10px;min-height:56px;padding:8px 10px;justify-content:flex-start}
+.qbtn .qi svg{width:26px;height:26px}
+.qbtn .ql{font-size:1rem;text-align:left}
+.grid2.quick{gap:8px}
+
+/* --- v1.8.2 : bascule actif / inactif --- */
+.progcard .pbadge{border:0;cursor:pointer;color:#fff;font-weight:700;padding:6px 14px;min-width:88px}
+.progcard .pbadge.on{background:#2fb67c}
+.progcard .pbadge.off{background:#d9534f}
+.progcard:not(.act) .phead{background:color-mix(in srgb,#d9534f 10%,var(--card2))}
