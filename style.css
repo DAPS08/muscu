@@ -253,3 +253,8 @@ html[data-mode=light][data-bg=points] body{background-image:radial-gradient(rgba
 html[data-mode=light][data-bg=grille] body{background-image:linear-gradient(rgba(20,40,80,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(20,40,80,.06) 1px,transparent 1px)}
 html[data-mode=light][data-bg=diagonales] body{background-image:repeating-linear-gradient(45deg,rgba(20,40,80,.05) 0 2px,transparent 2px 14px)}
 html[data-mode=light][data-bg=degrade] body,html[data-mode=light]:not([data-bg]) body{background-image:radial-gradient(rgba(20,40,80,.10) 1.3px,transparent 1.6px),linear-gradient(180deg,var(--accent-glow) 0,rgba(255,255,255,0) 1300px)}
+
+/* --- v1.11 : musique --- */
+.btn.musicbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin:0 0 12px;min-height:50px}
+.btn.musicbtn .qi{display:inline-flex;color:var(--accent)}
+.sessionbar .row>.iconbtn{width:40px;height:40px}

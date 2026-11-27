@@ -47,7 +47,7 @@ function dayKey(s) { return String(s || '').toLowerCase().normalize('NFD').repla
 const DAYS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
 const DAY_NAMES = { lun: 'Lundi', mar: 'Mardi', mer: 'Mercredi', jeu: 'Jeudi', ven: 'Vendredi', sam: 'Samedi', dim: 'Dimanche' };
 const GROUPES = ['Pectoraux', 'Dos', 'Épaules', 'Biceps', 'Triceps', 'Quadriceps', 'Ischios', 'Fessiers', 'Mollets', 'Abdos', 'Autre'];
-const VERSION = '1.10.0', VERSION_DATE = '27/11/2026';
+const VERSION = '1.11.0', VERSION_DATE = '27/11/2026';
 const GROUP_COLORS = { 'Pectoraux': '#ef6f6c', 'Dos': '#5b9dff', 'Épaules': '#f5a35b', 'Biceps': '#3ddc97', 'Triceps': '#b18cff', 'Quadriceps': '#4fd1d9', 'Ischios': '#e4c44f', 'Fessiers': '#ff8fc2', 'Mollets': '#8fbf5b', 'Abdos': '#a8b3c7', 'Autre': '#7d8596' };
 function gcolor(g) { return GROUP_COLORS[g] || GROUP_COLORS['Autre']; }
 const THEMES = [['vert', 'Vert', '#3ddc97'], ['bleu', 'Bleu', '#5b9dff'], ['orange', 'Orange', '#ffa24d'], ['violet', 'Violet', '#b18cff'], ['rose', 'Rose', '#ff7eb6'], ['jaune', 'Jaune', '#f2cf4a']];
@@ -625,8 +625,137 @@ const ICONS = {
   evenement: '<path d="M6 21V4"/><path d="M6 4.5h11.5l-2.3 3.8 2.3 3.8H6"/>',
   stats: '<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M21 20H3"/>',
   infos: '<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20.5c.6-3.9 3.6-6 7.5-6s6.9 2.1 7.5 6"/>',
-  passee: '<path d="M3.5 12a8.5 8.5 0 1 0 2.7-6.2L3.5 8.5"/><path d="M3.5 3.8v4.7h4.7"/><path d="M12 7.5V12l3 2"/>'
+  passee: '<path d="M3.5 12a8.5 8.5 0 1 0 2.7-6.2L3.5 8.5"/><path d="M3.5 3.8v4.7h4.7"/><path d="M12 7.5V12l3 2"/>',
+  musique: '<path d="M9 18V5.5l11-2V16"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>'
 };
+function icoSvg(name, size) { return '<svg viewBox="0 0 24 24" width="' + size + '" height="' + size + '" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[name] + '</svg>'; }
+
+/* ------------------------------------------------------------------ */
+/* Raccourci vers une appli de musique (choisie dans Reglages)         */
+/* ------------------------------------------------------------------ */
+const MUSIC_APPS = [
+  ['ytmusic', 'YouTube Music', 'com.google.android.apps.youtube.music', 'music.youtube.com', '/'],
+  ['spotify', 'Spotify', 'com.spotify.music', 'open.spotify.com', '/'],
+  ['deezer', 'Deezer', 'deezer.android.app', 'www.deezer.com', '/'],
+  ['amazon', 'Amazon Music', 'com.amazon.mp3', 'music.amazon.fr', '/'],
+  ['apple', 'Apple Music', 'com.apple.android.music', 'music.apple.com', '/fr'],
+  ['tidal', 'Tidal', 'com.aspiro.tidal', 'tidal.com', '/']
+];
+function musicApp() { const id = LS.get('music', ''); return MUSIC_APPS.find(function (a) { return a[0] === id; }) || null; }
+function musicWeb(a) { return 'https://' + a[3] + a[4]; }
+/* Android : lien "intent" qui ouvre l'appli installee, sinon la version web */
+function musicIntent(a) { return 'intent://' + a[3] + a[4] + '#Intent;scheme=https;package=' + a[2] + ';S.browser_fallback_url=' + encodeURIComponent(musicWeb(a)) + ';end'; }
+function openMusic() {
+  const a = musicApp(); if (!a) return;
+  if (/Android/i.test(navigator.userAgent || '')) location.href = musicIntent(a);
+  else window.open(musicWeb(a), '_blank', 'noopener');
+}
+function musicBtn() {
+  const a = musicApp(); if (!a) return null;
+  const i = h('span', { class: 'qi' }); i.innerHTML = icoSvg('musique', 22);
+  return h('button', { class: 'btn ghost musicbtn', onclick: openMusic }, i, 'Ouvrir ' + a[1]);
+}
+function musicIconBtn() {
+  const a = musicApp(); if (!a) return null;
+  const b = h('button', { class: 'btn small ghost iconbtn', title: 'Ouvrir ' + a[1], 'aria-label': 'Ouvrir ' + a[1], onclick: openMusic });
+  b.innerHTML = icoSvg('musique', 24); return b;
+}
+
+/* ------------------------------------------------------------------ */
+/* Export CSV (zip) : toutes les donnees, lisibles avec Excel          */
+/* ------------------------------------------------------------------ */
+function crc32(u8) {
+  if (!crc32.t) { crc32.t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; crc32.t[n] = c >>> 0; } }
+  let crc = 0xFFFFFFFF;
+  for (let i = 0; i < u8.length; i++) crc = crc32.t[(crc ^ u8[i]) & 255] ^ (crc >>> 8);
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+function zipStore(files) {
+  const enc = new TextEncoder(), parts = [], central = [], d = new Date();
+  let offset = 0;
+  const dt = ((d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1)) & 0xFFFF;
+  const dd = (((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate()) & 0xFFFF;
+  files.forEach(function (f) {
+    const name = enc.encode(f.name), data = enc.encode(f.text), crc = crc32(data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+    lh.setUint16(10, dt, true); lh.setUint16(12, dd, true); lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true);
+    lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+    parts.push(new Uint8Array(lh.buffer), name, data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+    ch.setUint16(12, dt, true); ch.setUint16(14, dd, true); ch.setUint32(16, crc, true); ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true);
+    ch.setUint16(28, name.length, true); ch.setUint32(42, offset, true);
+    central.push(new Uint8Array(ch.buffer), name);
+    offset += 30 + name.length + data.length;
+  });
+  let csize = 0; central.forEach(function (x) { csize += x.length; });
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true); end.setUint32(12, csize, true); end.setUint32(16, offset, true);
+  const all = parts.concat(central, [new Uint8Array(end.buffer)]);
+  let total = 0; all.forEach(function (x) { total += x.length; });
+  const out = new Uint8Array(total); let pos = 0;
+  all.forEach(function (x) { out.set(x, pos); pos += x.length; });
+  return out;
+}
+function csvCell(v) {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'number') return String(Math.round(v * 100) / 100).replace('.', ',');
+  const t = String(v);
+  return /[;"\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+}
+function toCsv(head, rows) { return '\ufeff' + [head].concat(rows).map(function (r) { return r.map(csvCell).join(';'); }).join('\r\n') + '\r\n'; }
+function buildExport(raw) {
+  const cfg = raw.config || {}, exs = {}, mods = {}, progs = {}, bySes = {};
+  (cfg.exercices || []).forEach(function (e) { exs[e.id] = e; });
+  (cfg.modeles || []).forEach(function (m) { mods[m.id] = m; });
+  (cfg.programmes || []).forEach(function (p) { progs[p.id] = p; });
+  const dFr = function (v) { v = String(v || ''); if (/^\d{4}-\d\d-\d\d$/.test(v)) return v.slice(8, 10) + '/' + v.slice(5, 7) + '/' + v.slice(0, 4); const d = new Date(v); return isNaN(d) ? v : fmtDateFr(d); };
+  const tFr = function (v) { const d = new Date(v); return !v || isNaN(d) || !/\d:\d/.test(String(v)) ? '' : hhmm(d.getTime()); };
+  const warm = function (t) { return t === 'echauffement' || t === 'échauffement'; };
+  const modName = function (id) { return mods[id] ? mods[id].nom : (id || ''); };
+  const progName = function (id) { const m = mods[id]; return m && progs[m.programme] ? progs[m.programme].nom : ''; };
+  (raw.sessions || []).forEach(function (x) { bySes[x.id] = x; });
+  const sets = (raw.sets || []).slice().sort(function (a, b) { const sa = bySes[a.s], sb = bySes[b.s]; return (sa ? Date.parse(sa.debut) : 0) - (sb ? Date.parse(sb.debut) : 0) || String(a.ts).localeCompare(String(b.ts)); });
+  const agg = {};
+  const serRows = sets.map(function (r) {
+    const x = bySes[r.s], e = exs[r.e] || {}, w = warm(r.t);
+    if (!agg[r.s]) agg[r.s] = { n: 0, vol: 0 };
+    if (!w) { agg[r.s].n++; agg[r.s].vol += r.c * r.r; }
+    return [x ? dFr(x.debut) : '', x ? modName(x.modele) : '', e.nom || r.e, e.groupe || '', r.n, r.t === 'travail' ? 'travail' : (w ? 'échauffement' : r.t), r.o > 1 ? r.o : '', r.c, r.r, w ? '' : Math.round(r.c * r.r * 100) / 100];
+  });
+  const sesRows = (raw.sessions || []).map(function (x) {
+    const a = agg[x.id] || { n: 0, vol: 0 };
+    return [dFr(x.debut), tFr(x.debut), tFr(x.fin), x.duree || '', modName(x.modele), progName(x.modele), a.n, Math.round(a.vol), x.note || ''];
+  });
+  const day = new Date().toISOString().slice(0, 10);
+  return [
+    { name: 'series.csv', text: toCsv(['Date', 'Séance', 'Exercice', 'Groupe musculaire', 'Série n°', 'Type', 'Palier (dropset)', 'Charge (kg)', 'Répétitions', 'Volume (kg)'], serRows) },
+    { name: 'seances.csv', text: toCsv(['Date', 'Début', 'Fin', 'Durée (min)', 'Séance', 'Programme', 'Séries de travail', 'Volume (kg)', 'Commentaire'], sesRows) },
+    { name: 'mesures.csv', text: toCsv(['Date', 'Poids (kg)', 'Masse grasse (%)'], (raw.measures || []).map(function (m) { return [dFr(m.date), m.poids, m.mg]; })) },
+    { name: 'autres_sports.csv', text: toCsv(['Date', 'Sport', 'Durée (min)', 'Commentaire'], (raw.activities || []).map(function (a) { return [dFr(a.date), a.sport, a.duree || '', a.note]; })) },
+    { name: 'evenements.csv', text: toCsv(['Début', 'Fin', 'Type', 'Commentaire'], (raw.events || []).map(function (e) { return [dFr(e.debut), dFr(e.fin), e.type, e.note]; })) },
+    { name: 'exercices.csv', text: toCsv(['Exercice', 'Groupe musculaire', 'Type', 'Principal'], (cfg.exercices || []).map(function (e) { return [e.nom, e.groupe, e.type, e.principal]; })) },
+    { name: 'LISEZMOI.txt', text: 'Export du ' + dFr(day) + '\r\nFichiers CSV (séparateur « ; », accents UTF-8) : à ouvrir avec Excel ou Google Sheets.\r\nseries.csv : une ligne par série. seances.csv : une ligne par séance terminée.\r\n' }
+  ];
+}
+async function exportCsv(btn) {
+  if (!S.cfg.url || !S.cfg.key) { toast('Connexion au moteur nécessaire'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Export en cours…'; }
+  try {
+    await flush();
+    const j = await api({ action: 'dashboard' });
+    const files = buildExport(j.data);
+    const blob = new Blob([zipStore(files)], { type: 'application/zip' });
+    const a = h('a', { href: URL.createObjectURL(blob), download: 'muscu-export-' + new Date().toISOString().slice(0, 10) + '.zip' });
+    document.body.append(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+    toast('Export téléchargé');
+  } catch (e) {
+    toast(/inconnue/i.test(e.message || '') ? 'Moteur Google pas à jour : recolle le dernier Code.gs' : 'Export impossible (' + (e.message || 'hors ligne') + ')');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = 'Exporter mes données (.zip de CSV)'; }
+}
 function renderHome() {
   const root = h('div', { class: 'screen' });
   root.append(topbar('Outil de suivi', h('button', { class: 'btn small ghost iconbtn', 'aria-label': 'Paramétrage', text: '⚙', onclick: function () { go('manage'); } })));
@@ -655,6 +784,7 @@ function renderHome() {
     qb('evenement', 'Événement', openEvent), qb('passee', 'Séance passée', openPast),
     qb('stats', 'Statistiques', function () { go('stats'); }), qb('infos', 'Infos perso', openInfos)));
   if (!empty) root.append(renderCalendar());
+  root.append(musicBtn());
   root.append(renderKpis());
   return root;
 }
@@ -1211,7 +1341,7 @@ function renderSession() {
   const A = S.active;
   const root = h('div', { class: 'screen' });
   root.append(h('div', { class: 'sessionbar' },
-    h('div', { class: 'row' }, homeBtn(), h('div', { class: 'sb-title grow', text: A.nom }), h('span', { id: 'badge', class: 'badge', onclick: function () { flush(); } }, '…')),
+    h('div', { class: 'row' }, homeBtn(), h('div', { class: 'sb-title grow', text: A.nom }), musicIconBtn(), h('span', { id: 'badge', class: 'badge', onclick: function () { flush(); } }, '…')),
     h('div', { class: 'sb-times' },
       h('span', { id: 't-global', class: 'pill', text: '⏱ 0:00' }),
       h('span', { id: 't-rest', class: 'pill rest', title: 'Toucher pour arrêter le repos', onclick: function () { A.restStart = null; persistActive(); tick(); } }))));
@@ -1873,6 +2003,17 @@ function tabSettings() {
     h('p', { class: 'small muted', text: 'Mode d\'affichage (réglage propre à ce téléphone ; Auto suit le réglage clair / sombre du téléphone).' }), modes,
     h('p', { class: 'small muted', style: 'margin-top:12px', text: 'Couleur principale' }), sw,
     h('p', { class: 'small muted', style: 'margin-top:12px', text: 'Fond de l\'écran' }), bgs));
+  const curMusic = LS.get('music', '');
+  const mus = h('div', { class: 'chips' });
+  [['', 'Aucune']].concat(MUSIC_APPS.map(function (m) { return [m[0], m[1]]; })).forEach(function (m) {
+    mus.append(h('button', { class: 'btn small ' + (curMusic === m[0] ? 'primary' : 'ghost'), text: m[1], onclick: function () { LS.set('music', m[0]); render(); } }));
+  });
+  wrap.append(h('div', { class: 'card' }, h('h2', { text: 'Musique' }),
+    h('p', { class: 'small muted', text: 'Choisis ton appli : un bouton apparaît sous le calendrier et dans la barre de séance pour l\'ouvrir (réglage propre à ce téléphone). Si l\'appli n\'est pas installée, la version web s\'ouvre.' }), mus));
+  const exBtn = h('button', { class: 'btn ghost', text: 'Exporter mes données (.zip de CSV)' });
+  exBtn.addEventListener('click', function () { exportCsv(exBtn); });
+  wrap.append(h('div', { class: 'card' }, h('h2', { text: 'Sauvegarde et export' }),
+    h('p', { class: 'small muted', text: 'Télécharge toutes tes données (séances, séries, poids, autres sports, événements) en fichiers CSV dans un zip, à ouvrir avec Excel. Tes données restent aussi dans ton Google Sheet.' }), exBtn));
   wrap.append(h('div', { class: 'card' }, h('h2', { text: 'Dashboard PC' }),
     h('p', { class: 'small muted', text: 'Page complète pour ordinateur (tous les graphiques et tableaux). Ouvre ce lien dans Chrome sur ton PC ; la première fois, colle l\'adresse du moteur et la clé.' }),
     h('button', { class: 'btn ghost', text: 'Copier le lien du dashboard', onclick: async function () {
@@ -1950,6 +2091,6 @@ function init() {
   checkStale();
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(function () {});
 }
-window.__muscu = { seedCatalog: seedCatalog, openPast: openPast, applyTheme: applyTheme, applyMode: applyMode, calModel: calModel, renderCalendar: renderCalendar, startRest: startRest, updateApp: updateApp, applyBg: applyBg, shareApp: shareApp, exList: exList, S: S, render: render, flush: flush, refresh: refresh, startSession: startSession, validateSet: validateSet, startDrop: startDrop, startTest: startTest, finishSession: finishSession, openFinish: openFinish, openGo: openGo, seedExample: seedExample, tick: tick, checkStale: checkStale, getDraft: getDraft, activeModels: activeModels, suggestModel: suggestModel };
+window.__muscu = { seedCatalog: seedCatalog, openPast: openPast, applyTheme: applyTheme, applyMode: applyMode, musicIntent: musicIntent, MUSIC_APPS: MUSIC_APPS, buildExport: buildExport, zipStore: zipStore, crc32: crc32, calModel: calModel, renderCalendar: renderCalendar, startRest: startRest, updateApp: updateApp, applyBg: applyBg, shareApp: shareApp, exList: exList, S: S, render: render, flush: flush, refresh: refresh, startSession: startSession, validateSet: validateSet, startDrop: startDrop, startTest: startTest, finishSession: finishSession, openFinish: openFinish, openGo: openGo, seedExample: seedExample, tick: tick, checkStale: checkStale, getDraft: getDraft, activeModels: activeModels, suggestModel: suggestModel };
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
