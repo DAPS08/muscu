@@ -317,3 +317,31 @@ html[data-mode=light] .qbtn .qi,html[data-mode=light] .btn.musicbtn .qi{backgrou
   background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 34%,var(--card)),color-mix(in srgb,var(--accent) 16%,var(--card)))}
 .btn.musicbtn .ql{padding-left:12px}
 html[data-mode=light] .qbtn .qi,html[data-mode=light] .btn.musicbtn .qi{background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 26%,#fff),color-mix(in srgb,var(--accent) 12%,#fff))}
+
+/* --- v1.13 : tuiles plus fines, stats : bandeau d'en-tete, axes, zone d'infos --- */
+.btn.qbtn{height:50px;padding:0 8px 0 0}
+.qbtn .qi,.qbtn .qi:has(.mlogo.has){width:46px;height:46px}
+.qbtn .ql{white-space:nowrap;font-size:.92rem;padding-left:4px;letter-spacing:-.1px}
+.btn.musicbtn{height:44px;padding:0 20px 0 0}
+.btn.musicbtn .qi,.btn.musicbtn .qi:has(.mlogo.has){width:40px;height:40px}
+.card.sc{padding:0;overflow:hidden}
+.card.sc>h2{margin:0;padding:11px 14px;font-size:1rem;background:color-mix(in srgb,var(--accent) 9%,var(--card2));border-bottom:1px solid var(--line)}
+.card.sc>*:not(h2){margin-left:14px;margin-right:14px}
+.card.sc>h2+*{margin-top:12px}
+.card.sc>*:last-child{margin-bottom:14px}
+.chartbox{background:color-mix(in srgb,var(--bg,#000) 35%,var(--card2));border:1px solid var(--line);border-radius:12px;padding:8px 6px 2px}
+html[data-mode=light] .chartbox{background:#fff}
+.lc .gl{stroke:color-mix(in srgb,var(--line) 55%,transparent);stroke-dasharray:2 3}
+.lc .axl{stroke:color-mix(in srgb,var(--muted) 65%,transparent);stroke-width:1.2}
+.infobox{margin-top:10px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--accent) 8%,var(--card2));border:1px solid var(--line)}
+.infobox .irow{display:flex;justify-content:space-between;gap:10px;font-size:.9rem;padding:3px 0}
+.infobox .ik{color:var(--muted)}.infobox .iv{font-weight:700;text-align:right}
+.ileg{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:.78rem;color:var(--muted)}
+.ileg span{display:inline-flex;align-items:center;gap:6px}
+.sw{display:inline-block}
+.sw.line{width:16px;height:3px;border-radius:2px;background:var(--accent)}
+.sw.dash{width:16px;height:0;border-top:2px dashed var(--muted)}
+.sw.box{width:11px;height:11px;border-radius:3px;opacity:.7}
+.chartbox{box-sizing:border-box}
+.qbtn .ql{font-size:.88rem;padding-right:2px}
+.card.sc>.chart{width:auto}
