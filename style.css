@@ -306,3 +306,14 @@ html[data-mode=light] .qbtn .qi,html[data-mode=light] .btn.musicbtn .qi{backgrou
 .qbtn .qi,.qbtn .qi:has(.mlogo.has){width:40px;height:40px;border-radius:12px}
 .btn.musicbtn{padding:8px 20px 8px 8px;gap:12px}
 .btn.musicbtn .qi,.btn.musicbtn .qi:has(.mlogo.has){width:38px;height:38px;border-radius:11px}
+
+/* --- v1.12.5 : tuiles en pilule, pastille ronde collee au bord gauche (fusionnee avec le cadre) --- */
+.btn.qbtn{padding:0 10px 0 0;gap:0;border-radius:999px;overflow:hidden;min-height:0;height:54px;align-items:stretch}
+.qbtn .qi,.qbtn .qi:has(.mlogo.has){width:50px;height:50px;border-radius:50%;border:0;margin:0;flex:none;align-self:center;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 34%,var(--card)),color-mix(in srgb,var(--accent) 16%,var(--card)));box-shadow:none}
+.qbtn .ql{flex:1;text-align:center;align-self:center;padding-left:6px}
+.btn.musicbtn{padding:0 22px 0 0;gap:0;border-radius:999px;overflow:hidden;height:48px;align-items:center}
+.btn.musicbtn .qi,.btn.musicbtn .qi:has(.mlogo.has){width:44px;height:44px;border-radius:50%;border:0;margin:0;flex:none;box-shadow:none;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 34%,var(--card)),color-mix(in srgb,var(--accent) 16%,var(--card)))}
+.btn.musicbtn .ql{padding-left:12px}
+html[data-mode=light] .qbtn .qi,html[data-mode=light] .btn.musicbtn .qi{background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 26%,#fff),color-mix(in srgb,var(--accent) 12%,#fff))}
