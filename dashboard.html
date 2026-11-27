@@ -41,33 +41,51 @@ h1,h2,h3{margin:0;line-height:1.2}
 .pop .it:hover{background:var(--card2)}
 .pop .it.on{background:var(--accent);color:var(--accent-ink)}
 .pop h4{margin:6px 8px 8px;font-size:.78rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;padding:0 8px 8px}
+.chip{border:1.5px solid var(--accent-line);background:var(--card2);border-radius:99px;padding:6px 14px;cursor:pointer;font-weight:700;font-size:.88rem}
+.chip:hover{border-color:var(--accent)}
+.chip.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.pop .act{display:flex;align-items:center;gap:8px;width:100%;margin:2px 0 4px;border:1.5px solid var(--accent-line);background:var(--card2);border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:700;text-align:left}
+.pop .act:hover{border-color:var(--accent)}
+.pop{max-height:82vh;overflow:auto}
+.perlbl{color:var(--muted);font-size:.9rem;font-weight:600}
+.perlbl b{color:var(--text)}
 .swatches{display:flex;gap:10px;flex-wrap:wrap;padding:2px 8px 10px}
 .swatch{width:34px;height:34px;border-radius:99px;border:3px solid #1d222c;cursor:pointer}
 .swatch.on{outline:3px solid var(--text);outline-offset:1px}
 html[data-bg=points] body{background-image:radial-gradient(rgba(255,255,255,.13) 1.3px,transparent 1.6px);background-size:18px 18px}
 html[data-bg=grille] body{background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:24px 24px}
 html[data-bg=diagonales] body{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.035) 0 2px,transparent 2px 14px)}
-html[data-bg=degrade] body,html:not([data-bg]) body{background-image:radial-gradient(rgba(255,255,255,.13) 1.3px,transparent 1.6px),linear-gradient(180deg,var(--accent-glow) 0,rgba(0,0,0,0) 1300px);background-size:18px 18px,100% 1300px;background-repeat:repeat,no-repeat;background-position:0 0,0 0}
+html[data-bg=degrade] body,html:not([data-bg]) body{background-image:radial-gradient(rgba(255,255,255,.12) 1.3px,transparent 1.6px);background-size:18px 18px;background-attachment:fixed}
+html[data-bg=degrade] body::before,html:not([data-bg]) body::before{content:"";position:fixed;inset:-25%;z-index:-1;pointer-events:none;background:radial-gradient(50% 55% at 14% 18%,var(--accent-glow),transparent 72%),radial-gradient(48% 55% at 88% 36%,var(--accent-glow),transparent 72%),radial-gradient(56% 50% at 48% 92%,var(--accent-glow),transparent 72%),radial-gradient(40% 45% at 6% 70%,var(--accent-glow),transparent 72%);animation:drift 26s ease-in-out infinite alternate}
+@keyframes drift{0%{transform:translate3d(-3%,-2%,0) scale(1)}50%{transform:translate3d(3%,2%,0) scale(1.08)}100%{transform:translate3d(-2%,3%,0) scale(1.03)}}
+@media(prefers-reduced-motion:reduce){html[data-bg=degrade] body::before,html:not([data-bg]) body::before{animation:none}}
 html[data-bg=emojis] body{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='110' height='110'%3E%3Ctext x='8' y='36' font-size='22' opacity='.13'%3E💪%3C/text%3E%3Ctext x='62' y='96' font-size='22' opacity='.13'%3E🏋️%3C/text%3E%3C/svg%3E");background-size:110px 110px}
 /* sections */
 section{margin-top:34px}
-section>h2{display:inline-flex;align-items:center;font-size:1.2rem;font-weight:800;margin-bottom:6px;padding:9px 18px;background:linear-gradient(var(--accent-soft),var(--accent-soft)),var(--card);border:1.5px solid var(--accent-line);border-left:6px solid var(--accent);border-radius:12px;box-shadow:0 3px 10px rgba(0,0,0,.25)}
-section>.sub{color:var(--muted);margin:6px 0 14px}
-.grid{display:grid;gap:16px;align-items:start}
+.shead{display:inline-flex;align-items:stretch;flex-wrap:wrap;max-width:100%;margin-bottom:16px;border:1.5px solid var(--accent-line);border-radius:12px;overflow:hidden;background:var(--card);box-shadow:0 3px 10px rgba(0,0,0,.25)}
+.shead .st{display:flex;align-items:center;gap:11px;padding:9px 18px 9px 14px;border-left:6px solid var(--accent);background:linear-gradient(var(--accent-soft),var(--accent-soft)),var(--card);font-size:1.2rem;font-weight:800;color:#fff}
+.shead .st svg{width:24px;height:24px;flex:none;stroke:#fff}
+.shead .sd{display:flex;align-items:center;padding:9px 18px;border-left:1.5px solid var(--accent-line);color:var(--muted);font-size:.92rem}
+.grid{display:grid;gap:16px;align-items:stretch}
+.grid>.card{display:flex;flex-direction:column}
+.grid>.card>.cbox{flex:0 0 auto}
 .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
-.g21{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}
 .kpis{grid-template-columns:repeat(7,minmax(0,1fr));align-items:stretch}
-.card.kpi{padding:0;overflow:hidden;display:flex;flex-direction:column;min-height:150px}
+.statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px 28px}
+.statgrid .mrow{margin:4px 0;border-bottom:1px solid var(--line);padding-bottom:6px}
+.card.kpi{padding:0;overflow:hidden;display:flex;flex-direction:column;min-height:185px}
 .kpi .kh{background:var(--card2);border-bottom:1.5px solid var(--accent-line);padding:9px 12px;font-size:.74rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);text-align:center}
 .kpi .kb{padding:14px 12px;flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
 @media(max-width:1300px){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:700px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:1000px){.g2,.g3,.g21{grid-template-columns:minmax(0,1fr)}.wrap{padding:0 14px 40px}.top .in{padding:10px 14px}}
+@media(max-width:1000px){.g2,.g3{grid-template-columns:minmax(0,1fr)}.wrap{padding:0 14px 40px}.top .in{padding:10px 14px}}
 .card{background:var(--card);border:1.5px solid var(--edge);border-radius:var(--r);padding:16px;box-shadow:0 3px 12px rgba(0,0,0,.28);min-width:0}
 .card h3{font-size:1.02rem;margin-bottom:10px;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
 .card h3 .small{font-weight:500}
 .kpi .v{font-size:2rem;font-weight:800;line-height:1.1}
+.kpi .ctx{margin-top:8px;padding-top:6px;border-top:1px solid var(--line);color:var(--muted);font-size:.78rem;line-height:1.3;width:100%}
 .kpi .v small{font-size:.95rem;font-weight:600;color:var(--muted)}
 .kpi .d{font-size:.85rem;font-weight:650;margin-top:4px}
 .up{color:var(--accent)}.down{color:var(--bad)}.flat{color:var(--muted)}
@@ -99,7 +117,7 @@ td.n,th.n{text-align:right;white-space:nowrap}
 .prog i{display:block;height:100%;background:var(--accent);border-radius:99px}
 .row2{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 input[type=text],input[type=password]{background:var(--bg);border:1.5px solid var(--edge);border-radius:10px;padding:10px 12px;min-width:0;width:100%}
-select{appearance:none;-webkit-appearance:none;background:linear-gradient(var(--accent-soft),var(--accent-soft)),#262c38 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9'%3E%3Cpath d='M1 1l6 6 6-6' fill='none' stroke='%23e8ecf2' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 12px center;border:1.5px solid var(--accent-line);border-radius:10px;padding:0 36px 0 14px;height:40px;min-width:180px;font-weight:700;cursor:pointer;color:var(--text)}
+select{appearance:none;-webkit-appearance:none;background:linear-gradient(var(--accent-soft),var(--accent-soft)),#262c38 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='28'%3E%3Crect x='1' y='1' width='30' height='26' rx='7' fill='none' stroke='%23aab2c0' stroke-width='1.5'/%3E%3Cpath d='M10.5 12l5.5 5.5 5.5-5.5' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 6px center;border:1.5px solid var(--accent-line);border-radius:10px;padding:0 46px 0 14px;height:42px;min-width:190px;font-weight:700;cursor:pointer;color:var(--text)}
 select:hover,select:focus{border-color:var(--accent);outline:0}
 select option{background:#1d222c;color:var(--text)}
 .warnbox{background:rgba(255,180,84,.12);border:1px solid rgba(255,180,84,.4);border-radius:12px;padding:12px 14px;margin-top:16px}
@@ -176,7 +194,7 @@ function gcolor(g) { return GROUP_COLORS[g] || GROUP_COLORS['Autre']; }
 
 /* ---------------- Apparence (comme l'appli) ---------------- */
 const THEMES = [['vert', 'Vert', '#3ddc97'], ['bleu', 'Bleu', '#5b9dff'], ['orange', 'Orange', '#ffa24d'], ['violet', 'Violet', '#b18cff'], ['rose', 'Rose', '#ff7eb6'], ['jaune', 'Jaune', '#f2cf4a']];
-const BGS = [['degrade', 'Dégradé + points'], ['points', 'Points'], ['grille', 'Grille'], ['diagonales', 'Diagonales'], ['emojis', 'Emojis'], ['uni', 'Uni']];
+const BGS = [['degrade', 'Dégradé animé + points'], ['points', 'Points'], ['grille', 'Grille'], ['diagonales', 'Diagonales'], ['emojis', 'Emojis'], ['uni', 'Uni']];
 let ACC = '#3ddc97', ACC2 = '#2aa876', ACC3 = '#2a6f56';
 function mixHex(hex, k) {
   const c = [1, 3, 5].map(function (i) { return parseInt(hex.slice(i, i + 2), 16); }), base = [15, 17, 21];
@@ -322,10 +340,29 @@ function legend(items) {
   return h('div', { class: 'leg' }, items.map(function (i) { return h('span', {}, h('i', { style: 'background:' + i.color + (i.op ? ';opacity:' + i.op : '') }), i.name); }));
 }
 /* o: {series:[{name,color,pts,dots,width,dash,area}], bands, goal:[[t,v],[t,v]], t0, t1, height, yfmt, yMin, yMax, unit} */
+function smoothPath(P) {
+  const n = P.length;
+  if (n < 3) return 'M' + P.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' L');
+  const dx = [], d = [], m = [];
+  for (let i = 0; i < n - 1; i++) { dx[i] = P[i + 1][0] - P[i][0]; d[i] = dx[i] ? (P[i + 1][1] - P[i][1]) / dx[i] : 0; }
+  m[0] = d[0]; m[n - 1] = d[n - 2];
+  for (let i = 1; i < n - 1; i++) m[i] = d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2;
+  for (let i = 0; i < n - 1; i++) {
+    if (d[i] === 0) { m[i] = 0; m[i + 1] = 0; continue; }
+    const a = m[i] / d[i], b = m[i + 1] / d[i], q = a * a + b * b;
+    if (q > 9) { const t = 3 / Math.sqrt(q); m[i] = t * a * d[i]; m[i + 1] = t * b * d[i]; }
+  }
+  let out = 'M' + P[0][0].toFixed(1) + ',' + P[0][1].toFixed(1);
+  for (let i = 0; i < n - 1; i++) {
+    const x0 = P[i][0], y0 = P[i][1], x1 = P[i + 1][0], y1 = P[i + 1][1], h3 = dx[i] / 3;
+    out += ' C' + (x0 + h3).toFixed(1) + ',' + (y0 + m[i] * h3).toFixed(1) + ' ' + (x1 - h3).toFixed(1) + ',' + (y1 - m[i + 1] * h3).toFixed(1) + ' ' + x1.toFixed(1) + ',' + y1.toFixed(1);
+  }
+  return out;
+}
 function lineChart(o) {
   const box = h('div', { class: 'cbox' });
   reg(box, function (W) {
-    const Hh = o.height || 300, L = 54, R = 18, T = 14, B = 32;
+    const Hh = o.height || 360, L = 54, R = 18, T = 14, B = 32;
     const all = [];
     o.series.forEach(function (s) { s.pts.forEach(function (p) { all.push(p); }); });
     if (o.goal) o.goal.forEach(function (p) { all.push(p); });
@@ -360,9 +397,10 @@ function lineChart(o) {
     o.series.forEach(function (sr) {
       const pts = sr.pts.filter(function (p) { return p[0] >= t0 && p[0] <= t1; });
       if (!pts.length) return;
-      const poly = pts.map(function (p) { return X(p[0]).toFixed(1) + ',' + Y(p[1]).toFixed(1); }).join(' ');
-      if (sr.area && pts.length > 1) s += '<polygon points="' + X(pts[0][0]).toFixed(1) + ',' + (Hh - B) + ' ' + poly + ' ' + X(pts[pts.length - 1][0]).toFixed(1) + ',' + (Hh - B) + '" fill="' + sr.color + '" opacity=".16"/>';
-      if (!sr.dotsOnly) s += '<polyline fill="none" stroke="' + sr.color + '" stroke-width="' + (sr.width || 3.6) + '" stroke-linejoin="round" stroke-linecap="round"' + (sr.dash ? ' stroke-dasharray="' + sr.dash + '"' : '') + ' points="' + poly + '"/>';
+      const px = pts.map(function (p) { return [X(p[0]), Y(p[1])]; });
+      const path = sr.straight ? 'M' + px.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' L') : smoothPath(px);
+      if (sr.area && pts.length > 1) s += '<path d="' + path + ' L' + px[px.length - 1][0].toFixed(1) + ',' + (Hh - B) + ' L' + px[0][0].toFixed(1) + ',' + (Hh - B) + ' Z" fill="' + sr.color + '" opacity=".16"/>';
+      if (!sr.dotsOnly) s += '<path fill="none" stroke="' + sr.color + '" stroke-width="' + (sr.width || 3.6) + '" stroke-linejoin="round" stroke-linecap="round"' + (sr.dash ? ' stroke-dasharray="' + sr.dash + '"' : '') + ' d="' + path + '"/>';
       if (sr.dots !== false) pts.forEach(function (p, i) {
         const big = sr.hi && sr.hi(p, i);
         s += '<circle cx="' + X(p[0]).toFixed(1) + '" cy="' + Y(p[1]).toFixed(1) + '" r="' + (big ? 7 : sr.r || 4.2) + '" fill="' + (big ? '#fff' : sr.color) + '"' + (big ? ' stroke="' + sr.color + '" stroke-width="3"' : '') + '/>';
@@ -480,11 +518,18 @@ function heatmap(M) {
 
 /* ---------------- Composants ---------------- */
 function card(title, sub) { const c = h('div', { class: 'card' }); if (title) c.append(h('h3', {}, h('span', { text: title }), sub ? h('span', { class: 'small muted', text: sub }) : null)); for (let i = 2; i < arguments.length; i++) add(c, arguments[i]); return c; }
-function kpi(label, value, delta, cls, unit) {
+function kpi(label, value, delta, cls, unit, ctx) {
   return h('div', { class: 'card kpi' }, h('div', { class: 'kh', text: label }),
-    h('div', { class: 'kb' }, h('div', { class: 'v' }, value, unit ? h('small', { text: ' ' + unit }) : null), delta ? h('div', { class: 'd ' + (cls || 'flat'), text: delta }) : null));
+    h('div', { class: 'kb' }, h('div', { class: 'v' }, value, unit ? h('small', { text: ' ' + unit }) : null), delta ? h('div', { class: 'd ' + (cls || 'flat'), text: delta }) : null, ctx ? h('div', { class: 'ctx', text: ctx }) : null));
 }
-function section(id, title, sub) { const s = h('section', { id: id }, h('h2', { text: title })); if (sub) s.append(h('div', { class: 'sub', text: sub })); for (let i = 3; i < arguments.length; i++) add(s, arguments[i]); return s; }
+function perLabel(M) {
+  const p = PERIODS.find(function (x) { return x[0] === S.per; }) || PERIODS[1];
+  if (!p[2]) return 'depuis le début' + (M.ses.length ? ' (' + fmtDate(M.ses[0].t) + ')' : '');
+  return { '1m': 'sur le dernier mois', '3m': 'sur les 3 derniers mois', '6m': 'sur les 6 derniers mois', '1a': 'sur la dernière année' }[p[0]];
+}
+const SECICONS = {"resume": "<rect x=\"3.5\" y=\"3.5\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"13.5\" y=\"3.5\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"3.5\" y=\"13.5\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"13.5\" y=\"13.5\" width=\"7\" height=\"7\" rx=\"1.5\"/>", "corps": "<circle cx=\"12\" cy=\"7.5\" r=\"3.5\"/><path d=\"M5 20c.7-4 3.5-6 7-6s6.3 2 7 6\"/>", "force": "<path d=\"M6.5 8v8M17.5 8v8M3.5 10v4M20.5 10v4M6.5 12h11\"/>", "muscles": "<path d=\"M12 3 3 8l9 5 9-5-9-5z\"/><path d=\"M3 12.5l9 5 9-5\"/><path d=\"M3 17l9 5 9-5\"/>", "regul": "<rect x=\"3.5\" y=\"5\" width=\"17\" height=\"15.5\" rx=\"2.5\"/><path d=\"M3.5 10h17M8 3v4M16 3v4\"/>", "records": "<path d=\"M8 4h8v5a4 4 0 0 1-8 0V4z\"/><path d=\"M8 6H4.5v1.5A3 3 0 0 0 8 10.5M16 6h3.5v1.5A3 3 0 0 1 16 10.5M12 13v4M8.5 20h7M10 17h4\"/>", "seances": "<path d=\"M9 6.5h11M9 12h11M9 17.5h11\"/><circle cx=\"4.8\" cy=\"6.5\" r=\"1\"/><circle cx=\"4.8\" cy=\"12\" r=\"1\"/><circle cx=\"4.8\" cy=\"17.5\" r=\"1\"/>", "autres": "<path d=\"M3 12h4l2.5-6 4 12 2.5-6H21\"/>", "objectifs": "<circle cx=\"12\" cy=\"12\" r=\"8.5\"/><circle cx=\"12\" cy=\"12\" r=\"4.5\"/><circle cx=\"12\" cy=\"12\" r=\"1\"/>"};
+function secIcon(id) { const e = h('span', { style: 'display:inline-flex' }); e.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (SECICONS[id] || '') + '</svg>'; return e; }
+function section(id, title, sub) { const s = h('section', { id: id }, h('div', { class: 'shead' }, h('div', { class: 'st' }, secIcon(id), title), sub ? h('div', { class: 'sd', text: sub }) : null)); for (let i = 3; i < arguments.length; i++) add(s, arguments[i]); return s; }
 function table(cols, rows, opt) {
   opt = opt || {};
   const tr = h('tr');
@@ -516,16 +561,16 @@ function secResume(M, from) {
   const lm = mm[mm.length - 1], refM = mm.filter(function (m) { return m.t >= from; })[0] || mm[0];
   const dM = lm && refM && lm !== refM ? lm.mg - refM.mg : null;
   const target = M.set.cible_seances_semaine || 0;
-  const spw = ses.length / weeks;
+  const spw = ses.length / weeks, PL = perLabel(M);
   return section('resume', 'Résumé', 'Vue d\'ensemble de la période sélectionnée.',
     h('div', { class: 'grid kpis' },
-      kpi('Score global', sc.avg === null ? '–' : pct(sc.avg), sc.avg === null ? '2 séances min. / exercice' : sc.up + ' / ' + sc.n + ' exos en progrès', sc.avg === null ? 'flat' : sc.avg >= 0 ? 'up' : 'down'),
-      kpi('Séances', String(ses.length), target ? fmtN(spw) + ' / sem. (objectif ' + target + ')' : fmtN(spw) + ' / semaine', target ? (spw >= target ? 'up' : 'flat') : 'flat'),
-      kpi('Volume', fmtK(vol)),
-      kpi('Séries', String(sets)),
-      kpi('Temps', fmtN(dur / 60, 1), null, null, 'h'),
-      kpi('Poids', lw ? fmtN(lw.poids) : '–', dW === null ? (lw ? 'pesée du ' + fmtDate(lw.t) : null) : (dW > 0 ? '+' : '') + fmtN(dW).replace(/^-/, '−') + ' kg sur la période', dW === null ? 'flat' : 'flat', 'kg'),
-      kpi('Masse grasse', lm ? fmtN(lm.mg) : '–', dM === null ? null : (dM > 0 ? '+' : '') + fmtN(dM).replace(/^-/, '−') + ' pt sur la période', 'flat', '%')));
+      kpi('Score global', sc.avg === null ? '–' : pct(sc.avg), sc.avg === null ? '2 séances min. / exercice' : sc.up + ' / ' + sc.n + ' exos en progrès', sc.avg === null ? 'flat' : sc.avg >= 0 ? 'up' : 'down', null, 'force moyenne (1RM), ' + PL),
+      kpi('Séances', String(ses.length), target ? fmtN(spw) + ' / sem. (objectif ' + target + ')' : fmtN(spw) + ' / semaine', target ? (spw >= target ? 'up' : 'flat') : 'flat', null, PL),
+      kpi('Volume', fmtK(vol), ses.length ? '≈ ' + fmtK(vol / ses.length) + ' / séance' : null, null, null, 'poids total soulevé, ' + PL),
+      kpi('Séries', String(sets), ses.length ? '≈ ' + fmtN(sets / ses.length, 0) + ' / séance' : null, null, null, 'séries de travail, ' + PL),
+      kpi('Temps', fmtN(dur / 60, 1), ses.length && dur ? '≈ ' + fmtN(dur / ses.length, 0) + ' min / séance' : null, null, 'h', 'temps d\'entraînement, ' + PL),
+      kpi('Poids', lw ? fmtN(lw.poids) : '–', dW === null ? (lw ? 'pesée du ' + fmtDate(lw.t) : null) : (dW > 0 ? '+' : '') + fmtN(dW).replace(/^-/, '−') + ' kg', 'flat', 'kg', dW === null ? 'dernière pesée' : 'variation, ' + PL + (lw ? ' · pesée du ' + fmtShort(lw.t) : '')),
+      kpi('Masse grasse', lm ? fmtN(lm.mg) : '–', dM === null ? null : (dM > 0 ? '+' : '') + fmtN(dM).replace(/^-/, '−') + ' pt', 'flat', '%', dM === null ? 'dernière mesure' : 'variation, ' + PL + (lm ? ' · mesure du ' + fmtShort(lm.t) : ''))));
 }
 function secCorps(M, from) {
   const now = Date.now(), wm = M.mes.filter(function (m) { return m.poids !== null; });
@@ -566,10 +611,12 @@ function secCorps(M, from) {
     stats.push(['Objectif de poids', fmtN(cib) + ' kg · reste ' + fmtN(Math.max(0, (cib - cur) * (cib > dep ? 1 : -1))) + ' kg']);
   }
   const side = card('Repères corporels');
-  stats.forEach(function (r) { side.append(h('div', { class: 'mrow' }, h('span', { class: 'muted', style: 'flex:1', text: r[0] }), h('b', { text: r[1] }))); });
+  const sg = h('div', { class: 'statgrid' });
+  stats.forEach(function (r) { sg.append(h('div', { class: 'mrow' }, h('span', { class: 'muted', style: 'flex:1', text: r[0] }), h('b', { text: r[1] }))); });
+  if (stats.length) side.append(sg);
   if (!stats.length) side.append(h('div', { class: 'empty', text: 'Pas encore assez de pesées.' }));
   if (!th) side.append(h('p', { class: 'small muted', text: 'Renseigne ta taille dans « Infos perso » de l\'appli pour voir l\'IMC.' }));
-  sec.append(h('div', { class: 'grid g21' }, c1, side));
+  sec.append(c1, h('div', { style: 'margin-top:16px' }, side));
   const fat = M.mes.filter(function (m) { return m.mg !== null && m.poids !== null && m.t >= from; });
   if (fat.length) {
     const c2 = card('Masse grasse (%)'), c3 = card('Masse maigre / masse grasse (kg)');
@@ -622,14 +669,13 @@ function secForce(M, from) {
   c1.append(legend(items));
   const c2 = card('Volume par séance (kg)');
   c2.append(barChart({ labels: rows.map(function (p) { return fmtShort(p.t); }), tipLabels: rows.map(function (p) { return fmtDate(p.t); }), series: [{ name: 'Volume', color: '#5b9dff', vals: rows.map(function (p) { return p.v; }) }], yfmt: function (v) { return fmtN(v, 0); }, height: 260 }));
-  const side = card('Meilleure performance');
-  if (best) side.append(h('div', { class: 'kpi' }, h('div', { class: 'v' }, fmtN(best.e), h('small', { text: ' kg (1RM est.)' })), h('div', { class: 'l', text: fmtN(best.c) + ' kg × ' + best.r + ' · ' + fmtDate(best.t) })));
+  if (best) c1.append(h('div', { style: 'margin-top:12px;padding-top:10px;border-top:1.5px solid var(--line);display:flex;gap:10px;flex-wrap:wrap;align-items:baseline' }, h('span', { class: 'muted', text: 'Meilleure performance' }), h('b', { style: 'font-size:1.25rem', text: fmtN(best.e) + ' kg' }), h('span', { class: 'muted', text: '(1RM estimé) · ' + fmtN(best.c) + ' kg × ' + best.r + ' · ' + fmtDate(best.t) })));
   const trs = rows.slice(-14).reverse().map(function (p) {
     return h('tr', {}, h('td', { text: fmtDate(p.t) }), h('td', { text: modName(p.m) }), h('td', {}, setsText(M, p.s, S.ex)), h('td', { class: 'n' }, fmtN(p.e), p.pr ? h('span', { class: 'badge pr', style: 'margin-left:6px', text: 'record' }) : null), h('td', { class: 'n', text: fmtN(p.v, 0) }));
   });
   const tbl = card('Dernières séances', rows.length + ' séance' + (rows.length > 1 ? 's' : '') + ' sur la période',
     rows.length ? table([{ label: 'Date' }, { label: 'Séance' }, { label: 'Séries (charge × reps)' }, { label: '1RM', n: 1 }, { label: 'Volume', n: 1 }], trs) : h('div', { class: 'empty', text: 'Rien sur cette période.' }));
-  sec.append(h('div', { class: 'grid g21' }, c1, side), h('div', { class: 'grid g2', style: 'margin-top:16px' }, c2, tbl));
+  sec.append(c1, h('div', { class: 'grid g2', style: 'margin-top:16px' }, c2, tbl));
   // comparaison
   if (!S.cmp) S.cmp = topExercises(M, from, 3);
   S.cmp = S.cmp.filter(function (id) { return M.ser[id]; });
@@ -704,13 +750,13 @@ function secRegul(M, from) {
   const okW = cnt.filter(function (n, i) { return !(i === cnt.length - 1) && n >= need; }).length, doneW = Math.max(1, cnt.length - 1);
   const durs = ses.filter(function (s) { return s.dur > 0; });
   sec.append(h('div', { class: 'grid kpis', style: 'margin-bottom:16px' },
-    kpi('Série en cours', String(streak), '≥ ' + need + ' séance' + (need > 1 ? 's' : '') + ' / semaine', 'flat', 'sem.'),
-    kpi('Record de série', String(best), null, null, 'sem.'),
-    kpi('Semaines réussies', cnt.length > 1 ? Math.round(okW / doneW * 100) + ' %' : '–', okW + ' sur ' + doneW),
-    kpi('Durée moyenne', durs.length ? fmtN(mean(durs.map(function (s) { return s.dur; })), 0) : '–', null, null, 'min'),
-    kpi('Total séances', String(M.ses.length), 'depuis le début'),
-    kpi('Séances / semaine', fmtN(ses.length / weeksIn(M, from)), 'moyenne sur la période'),
-    kpi('Plus longue pause', String(gapMax(M, from)), null, null, 'jours')));
+    kpi('Série en cours', String(streak), '≥ ' + need + ' séance' + (need > 1 ? 's' : '') + ' / semaine', 'flat', 'sem.', 'semaines consécutives, toutes périodes'),
+    kpi('Record de série', String(best), '≥ ' + need + ' séance' + (need > 1 ? 's' : '') + ' / semaine', 'flat', 'sem.', 'meilleure série des 2 dernières années'),
+    kpi('Semaines réussies', cnt.length > 1 ? Math.round(okW / doneW * 100) + ' %' : '–', okW + ' sur ' + doneW + ' semaines', 'flat', null, 'objectif ≥ ' + need + ' séance' + (need > 1 ? 's' : '') + ', ' + perLabel(M)),
+    kpi('Durée moyenne', durs.length ? fmtN(mean(durs.map(function (s) { return s.dur; })), 0) : '–', null, null, 'min', 'par séance, ' + perLabel(M)),
+    kpi('Total séances', String(M.ses.length), M.ses.length ? 'depuis le ' + fmtDate(M.ses[0].t) : null, 'flat', null, 'toutes périodes confondues'),
+    kpi('Séances / semaine', fmtN(ses.length / weeksIn(M, from)), target ? 'objectif ' + target : null, 'flat', null, 'moyenne, ' + perLabel(M)),
+    kpi('Plus longue pause', String(gapMax(M, from)), null, null, 'jours', 'entre deux séances, ' + perLabel(M))));
   sec.append(h('div', { class: 'grid' }, card('12 derniers mois', 'couleur moyenne : 1 séance · couleur vive : 2 et + · bleu : autre sport', heatmap(M))));
   const c1 = card('Séances par semaine', target ? 'objectif ' + target : ''), c2 = card('Jours de la semaine'), c3 = card('Heure de début');
   c1.append(barChart({ labels: weeks.map(fmtShort), tipLabels: weeks.map(function (w) { return 'Semaine du ' + fmtDate(w); }), series: [{ name: 'Séances', color: ACC, vals: cnt, colors: cnt.map(function (n) { return target && n >= target ? ACC : ACC3; }) }], ref: target || 0, yfmt: function (v) { return fmtN(v, 0); }, height: 260 }));
@@ -866,23 +912,25 @@ function render() {
     return h('div', { class: 'popwrap' }, btn, pop);
   }
   const curP = PERIODS.find(function (x) { return x[0] === S.per; }) || PERIODS[1];
-  const perPop = h('div', { class: 'pop' }, h('h4', { text: 'Période' }));
-  PERIODS.forEach(function (p) { perPop.append(h('button', { class: 'it' + (S.per === p[0] ? ' on' : ''), text: p[1], onclick: function () { S.per = p[0]; LS.set('dashPer', p[0]); render(); } })); });
-  const lookPop = h('div', { class: 'pop', style: 'min-width:240px' }, h('h4', { text: 'Couleur principale' }));
+  const pop = h('div', { class: 'pop', style: 'min-width:270px' }, h('h4', { text: 'Période affichée' }));
+  const chips = h('div', { class: 'chips' });
+  PERIODS.forEach(function (p) { chips.append(h('button', { class: 'chip' + (S.per === p[0] ? ' on' : ''), text: p[1], onclick: function () { S.per = p[0]; LS.set('dashPer', p[0]); render(); } })); });
+  pop.append(chips, h('h4', { text: 'Données' }));
+  const upd = S.updated ? 'Dernière mise à jour : ' + p2(new Date(S.updated).getHours()) + ':' + p2(new Date(S.updated).getMinutes()) : 'Jamais chargé';
+  pop.append(h('button', { class: 'act', onclick: load }, '↻  Recharger depuis Google Sheets'), h('div', { class: 'small muted', style: 'margin:0 8px 6px', text: upd }));
+  pop.append(h('h4', { text: 'Couleur principale' }));
   const sw = h('div', { class: 'swatches' }), curT = LS.get('theme', 'vert');
   THEMES.forEach(function (t) { sw.append(h('button', { class: 'swatch' + (curT === t[0] ? ' on' : ''), style: 'background:' + t[2], title: t[1], 'aria-label': t[1], onclick: function () { LS.set('theme', t[0]); applyTheme(t[0]); render(); } })); });
-  lookPop.append(sw, h('h4', { text: 'Fond' }));
+  pop.append(sw, h('h4', { text: 'Fond' }));
   const curB = LS.get('bg', 'degrade');
-  BGS.forEach(function (b) { lookPop.append(h('button', { class: 'it' + (curB === b[0] ? ' on' : ''), text: b[1], onclick: function () { LS.set('bg', b[0]); applyBg(b[0]); render(); } })); });
-  const upd = S.updated ? 'Mis à jour à ' + p2(new Date(S.updated).getHours()) + ':' + p2(new Date(S.updated).getMinutes()) + ' : cliquer pour recharger' : 'Charger les données';
-  const palette = h('button', { class: 'btn icon', title: 'Apparence', 'aria-label': 'Apparence' });
-  palette.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.2" r="1"/><circle cx="14.5" cy="7.2" r="1"/></svg>';
-  const refresh = h('button', { class: 'btn icon', title: upd, 'aria-label': 'Recharger', text: '↻', onclick: load });
+  BGS.forEach(function (b) { pop.append(h('button', { class: 'it' + (curB === b[0] ? ' on' : ''), text: b[1], onclick: function () { LS.set('bg', b[0]); applyBg(b[0]); render(); } })); });
+  const gear = h('button', { class: 'btn icon', title: 'Paramètres du dashboard', 'aria-label': 'Paramètres' });
+  gear.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 14.5a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3h0a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5h0a1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8v0a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg>';
   const nav = h('div', { class: 'navrow' });
   [['resume', 'Résumé'], ['corps', 'Corps'], ['force', 'Force'], ['muscles', 'Muscles'], ['regul', 'Régularité'], ['records', 'Records'], ['seances', 'Séances'], ['autres', 'Sports & événements'], ['objectifs', 'Objectifs']].forEach(function (n) { nav.append(h('a', { class: 'nb', href: '#' + n[0], 'data-sec': n[0], text: n[1] })); });
   app.append(h('div', { class: 'top' }, h('div', { class: 'in' },
     h('div', { class: 'toprow' }, h('div', { class: 'brand', text: 'DASHBOARD' }),
-      popBtn(h('button', { class: 'btn', text: curP[1] + ' ▾' }), perPop), refresh, popBtn(palette, lookPop)),
+      h('span', { class: 'perlbl' }, 'Période : ', h('b', { text: curP[1] })), popBtn(gear, pop)),
     nav)));
   const wrap = h('div', { class: 'wrap' });
   if (S.err === 'maj') wrap.append(h('div', { class: 'warnbox', text: 'Le moteur Google n\'a pas la version du dashboard : colle le nouveau Code.gs dans Apps Script puis déploie une nouvelle version (voir le guide).' }));
