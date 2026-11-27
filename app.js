@@ -47,7 +47,7 @@ function dayKey(s) { return String(s || '').toLowerCase().normalize('NFD').repla
 const DAYS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
 const DAY_NAMES = { lun: 'Lundi', mar: 'Mardi', mer: 'Mercredi', jeu: 'Jeudi', ven: 'Vendredi', sam: 'Samedi', dim: 'Dimanche' };
 const GROUPES = ['Pectoraux', 'Dos', 'Épaules', 'Biceps', 'Triceps', 'Quadriceps', 'Ischios', 'Fessiers', 'Mollets', 'Abdos', 'Autre'];
-const VERSION = '1.12.0', VERSION_DATE = '27/11/2026';
+const VERSION = '1.12.2', VERSION_DATE = '27/11/2026';
 const GROUP_COLORS = { 'Pectoraux': '#ef6f6c', 'Dos': '#5b9dff', 'Épaules': '#f5a35b', 'Biceps': '#3ddc97', 'Triceps': '#b18cff', 'Quadriceps': '#4fd1d9', 'Ischios': '#e4c44f', 'Fessiers': '#ff8fc2', 'Mollets': '#8fbf5b', 'Abdos': '#a8b3c7', 'Autre': '#7d8596' };
 function gcolor(g) { return GROUP_COLORS[g] || GROUP_COLORS['Autre']; }
 const THEMES = [['vert', 'Vert', '#3ddc97'], ['bleu', 'Bleu', '#5b9dff'], ['orange', 'Orange', '#ffa24d'], ['violet', 'Violet', '#b18cff'], ['rose', 'Rose', '#ff7eb6'], ['jaune', 'Jaune', '#f2cf4a']];
@@ -647,7 +647,8 @@ const MUSIC_APPS = [
   ['deezer', 'Deezer', 'deezer.android.app', 'www.deezer.com', '/'],
   ['amazon', 'Amazon Music', 'com.amazon.mp3', 'music.amazon.fr', '/'],
   ['apple', 'Apple Music', 'com.apple.android.music', 'music.apple.com', '/fr'],
-  ['tidal', 'Tidal', 'com.aspiro.tidal', 'tidal.com', '/']
+  ['tidal', 'Tidal', 'com.aspiro.tidal', 'tidal.com', '/'],
+  ['soundcloud', 'SoundCloud', 'com.soundcloud.android', 'soundcloud.com', '/']
 ];
 function musicApp() { const id = LS.get('music', ''); return MUSIC_APPS.find(function (a) { return a[0] === id; }) || null; }
 function musicWeb(a) { return 'https://' + a[3] + a[4]; }
@@ -664,14 +665,14 @@ function musicLogo(a, size) {
   box.innerHTML = icoSvg('musique', size);
   try {
     const img = new Image(); img.alt = '';
-    img.onload = function () { box.innerHTML = ''; img.style.width = img.style.height = size + 'px'; box.append(img); };
+    img.onload = function () { box.innerHTML = ''; box.classList.add('has'); img.style.width = img.style.height = size + 'px'; box.append(img); };
     img.src = 'music/' + a[0] + '.png';
   } catch (e) { /* pas d'image : on garde la note */ }
   return box;
 }
 function musicBtn() {
   const a = musicApp(); if (!a) return null;
-  return h('button', { class: 'btn ghost musicbtn', onclick: openMusic }, h('span', { class: 'qi' }, musicLogo(a, 28)), h('span', { class: 'ql', text: 'Ouvrir ' + a[1] }));
+  return h('button', { class: 'btn ghost musicbtn', onclick: openMusic }, h('span', { class: 'qi' }, musicLogo(a, 34)), h('span', { class: 'ql', text: 'Ouvrir ' + a[1] }));
 }
 function musicIconBtn() {
   const a = musicApp(); if (!a) return null;
@@ -792,6 +793,8 @@ function renderHome() {
   } else {
     root.append(h('button', { class: 'go', onclick: openGo }, 'GO!', h('small', { text: 'Lancer une séance' })));
   }
+  const mb = musicBtn();
+  if (mb) root.append(mb);
   const qb = function (ico, label, fn) {
     const i = h('span', { class: 'qi' }); i.innerHTML = '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[ico] + '</svg>';
     return h('button', { class: 'btn qbtn', onclick: fn }, i, h('span', { class: 'ql', text: label }));
@@ -801,7 +804,6 @@ function renderHome() {
     qb('evenement', 'Événement', openEvent), qb('passee', 'Séance passée', openPast),
     qb('stats', 'Statistiques', function () { go('stats'); }), qb('infos', 'Infos perso', openInfos)));
   if (!empty) root.append(renderCalendar());
-  root.append(musicBtn());
   root.append(renderKpis());
   return root;
 }
