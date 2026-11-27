@@ -237,3 +237,19 @@ h3.rk2{margin:16px 0 8px;font-size:1rem}
 .progcard .pbadge.on{background:#2fb67c}
 .progcard .pbadge.off{background:#d9534f}
 .progcard:not(.act) .phead{background:color-mix(in srgb,#d9534f 10%,var(--card2))}
+
+/* --- v1.10 : mode clair --- */
+:root{color-scheme:dark}
+html[data-mode=light]{color-scheme:light;--bg:#f2f4f8;--card:#ffffff;--card2:#edf0f5;--line:#d9dee7;--text:#1a2230;--muted:#5a6578;--bar:#ffffff;--warn:#b26a00;--bad:#d23b3b;--blue:#2f6fd6;--edge:color-mix(in srgb,var(--accent) 30%,#b4bccb)}
+html[data-mode=light] .topbar,html[data-mode=light] .sessionbar{box-shadow:0 1px 0 var(--accent-line),0 4px 10px rgba(30,50,90,.10)}
+html[data-mode=light] .card{box-shadow:0 1px 3px rgba(30,50,90,.08)}
+html[data-mode=light] .btn.qbtn{box-shadow:0 1px 3px rgba(30,50,90,.10)}
+html[data-mode=light] .chip.best{background:#fff1cf}
+html[data-mode=light] .warnbox{background:#fff4dc;border-color:#e8c777;color:#8a5a00}
+html[data-mode=light] .cal .cday:nth-child(n+8){border-top-color:rgba(0,0,0,.07)}
+html[data-mode=light] .cn.stripe{background:repeating-linear-gradient(135deg,var(--accent) 0 4px,#d3eee1 4px 8px);color:#10261c;text-shadow:none}
+html[data-mode=light] .cn.moved{border-color:#9aa3b2}
+html[data-mode=light][data-bg=points] body{background-image:radial-gradient(rgba(20,40,80,.12) 1.3px,transparent 1.6px)}
+html[data-mode=light][data-bg=grille] body{background-image:linear-gradient(rgba(20,40,80,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(20,40,80,.06) 1px,transparent 1px)}
+html[data-mode=light][data-bg=diagonales] body{background-image:repeating-linear-gradient(45deg,rgba(20,40,80,.05) 0 2px,transparent 2px 14px)}
+html[data-mode=light][data-bg=degrade] body,html[data-mode=light]:not([data-bg]) body{background-image:radial-gradient(rgba(20,40,80,.10) 1.3px,transparent 1.6px),linear-gradient(180deg,var(--accent-glow) 0,rgba(255,255,255,0) 1300px)}

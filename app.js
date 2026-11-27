@@ -47,19 +47,30 @@ function dayKey(s) { return String(s || '').toLowerCase().normalize('NFD').repla
 const DAYS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
 const DAY_NAMES = { lun: 'Lundi', mar: 'Mardi', mer: 'Mercredi', jeu: 'Jeudi', ven: 'Vendredi', sam: 'Samedi', dim: 'Dimanche' };
 const GROUPES = ['Pectoraux', 'Dos', 'Épaules', 'Biceps', 'Triceps', 'Quadriceps', 'Ischios', 'Fessiers', 'Mollets', 'Abdos', 'Autre'];
-const VERSION = '1.9.0', VERSION_DATE = '26/11/2026';
+const VERSION = '1.10.0', VERSION_DATE = '27/11/2026';
 const GROUP_COLORS = { 'Pectoraux': '#ef6f6c', 'Dos': '#5b9dff', 'Épaules': '#f5a35b', 'Biceps': '#3ddc97', 'Triceps': '#b18cff', 'Quadriceps': '#4fd1d9', 'Ischios': '#e4c44f', 'Fessiers': '#ff8fc2', 'Mollets': '#8fbf5b', 'Abdos': '#a8b3c7', 'Autre': '#7d8596' };
 function gcolor(g) { return GROUP_COLORS[g] || GROUP_COLORS['Autre']; }
 const THEMES = [['vert', 'Vert', '#3ddc97'], ['bleu', 'Bleu', '#5b9dff'], ['orange', 'Orange', '#ffa24d'], ['violet', 'Violet', '#b18cff'], ['rose', 'Rose', '#ff7eb6'], ['jaune', 'Jaune', '#f2cf4a']];
+const MODES = [['sombre', 'Sombre'], ['clair', 'Clair'], ['auto', 'Auto']];
+function isLight() { const m = LS.get('mode', 'sombre'); return m === 'clair' || (m === 'auto' && !!window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches); }
 function applyTheme(id) {
-  const t = THEMES.find(function (x) { return x[0] === id; }) || THEMES[0], hex = t[2];
-  const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+  const t = THEMES.find(function (x) { return x[0] === id; }) || THEMES[0], lt = isLight();
+  const c0 = [1, 3, 5].map(function (i) { return parseInt(t[2].slice(i, i + 2), 16); }), c = lt ? c0.map(function (v) { return Math.round(v * .62); }) : c0;
+  const hex = '#' + c.map(function (v) { return (v < 16 ? '0' : '') + v.toString(16); }).join('');
   const st = document.documentElement.style;
   st.setProperty('--accent', hex);
-  st.setProperty('--accent-soft', 'rgba(' + r + ',' + g + ',' + b + ',.14)');
-  st.setProperty('--accent-line', 'rgba(' + r + ',' + g + ',' + b + ',.45)');
-  st.setProperty('--accent-glow', 'rgba(' + r + ',' + g + ',' + b + ',.28)');
+  st.setProperty('--accent-ink', lt ? '#ffffff' : '#0b0f14');
+  st.setProperty('--accent-soft', 'rgba(' + c.join(',') + ',' + (lt ? .12 : .14) + ')');
+  st.setProperty('--accent-line', 'rgba(' + c.join(',') + ',' + (lt ? .5 : .45) + ')');
+  st.setProperty('--accent-glow', 'rgba(' + c.join(',') + ',' + (lt ? .2 : .28) + ')');
 }
+function applyMode() {
+  const lt = isLight();
+  document.documentElement.setAttribute('data-mode', lt ? 'light' : 'dark');
+  const mt = document.querySelector('meta[name=theme-color]'); if (mt) mt.setAttribute('content', lt ? '#ffffff' : '#0f1115');
+  applyTheme(LS.get('theme', 'vert'));
+}
+if (window.matchMedia) { try { window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function () { if (LS.get('mode', 'sombre') === 'auto') { applyMode(); render(); } }); } catch (e) { /* ancien navigateur */ } }
 const BGS = [['degrade', 'Dégradé + points'], ['points', 'Points'], ['grille', 'Grille'], ['diagonales', 'Diagonales'], ['emojis', 'Emojis'], ['uni', 'Uni']];
 function applyBg(id) { document.documentElement.setAttribute('data-bg', BGS.some(function (b) { return b[0] === id; }) ? id : 'degrade'); }
 /* Nom d'exercice : le mouvement, puis le materiel entre parentheses en petit */
@@ -1853,8 +1864,14 @@ function tabSettings() {
   BGS.forEach(function (b) {
     bgs.append(h('button', { class: 'btn small ' + (curBg === b[0] ? 'primary' : 'ghost'), text: b[1], onclick: function () { LS.set('bg', b[0]); applyBg(b[0]); render(); } }));
   });
+  const curMode = LS.get('mode', 'sombre');
+  const modes = h('div', { class: 'chips' });
+  MODES.forEach(function (m) {
+    modes.append(h('button', { class: 'btn small ' + (curMode === m[0] ? 'primary' : 'ghost'), text: m[1], onclick: function () { LS.set('mode', m[0]); applyMode(); render(); } }));
+  });
   wrap.append(h('div', { class: 'card' }, h('h2', { text: 'Apparence' }),
-    h('p', { class: 'small muted', text: 'Couleur principale (réglage propre à ce téléphone).' }), sw,
+    h('p', { class: 'small muted', text: 'Mode d\'affichage (réglage propre à ce téléphone ; Auto suit le réglage clair / sombre du téléphone).' }), modes,
+    h('p', { class: 'small muted', style: 'margin-top:12px', text: 'Couleur principale' }), sw,
     h('p', { class: 'small muted', style: 'margin-top:12px', text: 'Fond de l\'écran' }), bgs));
   wrap.append(h('div', { class: 'card' }, h('h2', { text: 'Dashboard PC' }),
     h('p', { class: 'small muted', text: 'Page complète pour ordinateur (tous les graphiques et tableaux). Ouvre ce lien dans Chrome sur ton PC ; la première fois, colle l\'adresse du moteur et la clé.' }),
@@ -1923,7 +1940,7 @@ function seedExample() {
 /* Demarrage                                                           */
 /* ================================================================== */
 function init() {
-  applyTheme(LS.get('theme', 'vert'));
+  applyMode();
   applyBg(LS.get('bg', 'degrade'));
   render();
   window.addEventListener('online', function () { flush().then(refresh); });
@@ -1933,6 +1950,6 @@ function init() {
   checkStale();
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(function () {});
 }
-window.__muscu = { seedCatalog: seedCatalog, openPast: openPast, applyTheme: applyTheme, calModel: calModel, renderCalendar: renderCalendar, startRest: startRest, updateApp: updateApp, applyBg: applyBg, shareApp: shareApp, exList: exList, S: S, render: render, flush: flush, refresh: refresh, startSession: startSession, validateSet: validateSet, startDrop: startDrop, startTest: startTest, finishSession: finishSession, openFinish: openFinish, openGo: openGo, seedExample: seedExample, tick: tick, checkStale: checkStale, getDraft: getDraft, activeModels: activeModels, suggestModel: suggestModel };
+window.__muscu = { seedCatalog: seedCatalog, openPast: openPast, applyTheme: applyTheme, applyMode: applyMode, calModel: calModel, renderCalendar: renderCalendar, startRest: startRest, updateApp: updateApp, applyBg: applyBg, shareApp: shareApp, exList: exList, S: S, render: render, flush: flush, refresh: refresh, startSession: startSession, validateSet: validateSet, startDrop: startDrop, startTest: startTest, finishSession: finishSession, openFinish: openFinish, openGo: openGo, seedExample: seedExample, tick: tick, checkStale: checkStale, getDraft: getDraft, activeModels: activeModels, suggestModel: suggestModel };
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
