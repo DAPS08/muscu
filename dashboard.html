@@ -147,16 +147,18 @@ select option{background:#1d222c;color:var(--text)}
 .minis .kb{padding:12px 10px}
 .minis .v{font-size:1.5rem}
 .minis .ctx{margin-top:6px;padding-top:5px}
-.obilan{margin-bottom:16px;padding:14px 18px}
-.orow{display:flex;gap:0;flex-wrap:wrap}
-.oc{flex:1 1 220px;display:flex;align-items:center;gap:14px;padding:4px 18px;border-left:1.5px solid var(--line)}
-.oc:first-child{border-left:0;padding-left:0}
-.oc .n{font-size:2.3rem;font-weight:800;line-height:1}
-.oc .t b{display:block;font-size:.95rem}
-.oc .t span{color:var(--muted);font-size:.8rem;line-height:1.3;display:block}
-.oc.run .n{color:#5b9dff}.oc.good .n{color:var(--accent)}.oc.bad .n{color:var(--bad)}
-.obar{display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--card2);margin-top:14px}
-.obar i{display:block;height:100%}
+.ocnt{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:22px}
+.ocnt .card.kpi{min-height:0}
+.ocnt .v{font-size:2.2rem}
+.ocnt .v.good{color:var(--accent)}
+.ocnt .v.bad{color:var(--bad)}
+.ocat{padding:0;overflow:hidden}
+.ocat .oh{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px;background:linear-gradient(var(--accent-soft),var(--accent-soft)),var(--card2);border-bottom:1.5px solid var(--accent-line);border-left:6px solid var(--accent)}
+.ocat .oh b{font-size:1.05rem;color:#fff}
+.ocat .oh span{font-size:.8rem;color:var(--muted)}
+.ocat .ob{padding:14px;display:flex;flex-direction:column;gap:10px}
+.ocat .oi{border:1.5px solid var(--line);background:var(--card2);border-radius:12px;padding:12px 14px}
+@media(max-width:700px){.ocnt{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:1100px){.minis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.oc{border-left:0;padding:8px 0;flex-basis:100%}}
 .setup{max-width:520px;margin:12vh auto;padding:0 20px}
@@ -889,27 +891,21 @@ function secObjectifs(M) {
   const urgent = function (x) { return x.p < 1 && x.days !== null && x.days <= 30; };
   const nDone = items.filter(function (x) { return x.p >= 1; }).length, nUrg = items.filter(urgent).length, nRun = items.length - nDone - nUrg;
   const nearest = items.filter(urgent).sort(function (a, b) { return a.days - b.days; })[0];
-  const oc = function (cls, n, t, sub) { return h('div', { class: 'oc ' + cls }, h('div', { class: 'n', text: String(n) }), h('div', { class: 't' }, h('b', { text: t }), h('span', { text: sub }))); };
-  const tot = items.length;
-  sec.append(h('div', { class: 'card obilan' },
-    h('div', { class: 'orow' },
-      oc('good', nDone, 'Réalisés', 'sur ' + tot + ' objectif' + (tot > 1 ? 's' : '')),
-      oc('run', nRun, 'En cours', 'échéance lointaine ou sans date'),
-      oc(nUrg ? 'bad' : '', nUrg, 'Urgents', nearest ? 'le plus proche : ' + nearest.label + (nearest.days >= 0 ? ' (J-' + nearest.days + ')' : ' (dépassé)') : 'échéance sous 30 jours ou dépassée')),
-    h('div', { class: 'obar' },
-      h('i', { style: 'width:' + (nDone / tot * 100) + '%;background:var(--accent)' }),
-      h('i', { style: 'width:' + (nRun / tot * 100) + '%;background:#5b9dff' }),
-      h('i', { style: 'width:' + (nUrg / tot * 100) + '%;background:var(--bad)' }))));
+  sec.append(h('div', { class: 'grid ocnt' },
+    kpi('Réalisés', h('span', { class: 'v good', text: String(nDone) }), null, null, '', 'sur ' + items.length + ' objectif' + (items.length > 1 ? 's' : '')),
+    kpi('En cours', h('span', { text: String(nRun) }), null, null, '', 'échéance lointaine ou sans date'),
+    kpi('Urgents', h('span', { class: nUrg ? 'v bad' : '', text: String(nUrg) }), null, null, '', nearest ? 'le plus proche : ' + nearest.label + (nearest.days >= 0 ? ' (J-' + nearest.days + ')' : ' (dépassé)') : 'échéance sous 30 jours ou dépassée')));
   const grid = h('div', { class: 'grid g3' });
   ['Poids', 'Masse grasse', 'Performances'].forEach(function (c) {
     const g = items.filter(function (x) { return x.cat === c; }); if (!g.length) return;
     g.sort(function (a, b) { return (a.days === null ? 1e9 : a.days) - (b.days === null ? 1e9 : b.days) || b.p - a.p; });
-    const cd = card(c);
+    const cd = h('div', { class: 'card ocat' }, h('div', { class: 'oh' }, h('b', { text: c }), h('span', { text: g.length + ' objectif' + (g.length > 1 ? 's' : '') }))), ob = h('div', { class: 'ob' });
     g.forEach(function (x) {
-      cd.append(h('div', { style: 'margin-bottom:14px' }, h('div', { class: 'mrow', style: 'margin:0' }, h('b', { style: 'flex:1', text: x.label }), h('span', { text: fmtN(x.cur) + ' / ' + fmtN(x.cib) + x.unit })),
+      ob.append(h('div', { class: 'oi' }, h('div', { class: 'mrow', style: 'margin:0' }, h('b', { style: 'flex:1', text: x.label }), h('span', { text: fmtN(x.cur) + ' / ' + fmtN(x.cib) + x.unit })),
         h('div', { class: 'prog' }, h('i', { style: 'width:' + Math.round(x.p * 100) + '%' })),
         h('div', { class: 'small muted' }, Math.round(x.p * 100) + ' % · ' + (x.p >= 1 ? 'atteint' : 'encore ' + fmtN(x.left) + x.unit) + (x.days !== null && x.p < 1 ? (x.days >= 0 ? ' · J-' + x.days : ' · échéance dépassée') : ''), x.p >= 1 ? h('span', { class: 'badge pr', style: 'margin-left:8px', text: '✓ Réalisé' }) : urgent(x) ? h('span', { class: 'badge warn', style: 'margin-left:8px', text: 'Urgent' }) : null)));
     });
+    cd.append(ob);
     grid.append(cd);
   });
   sec.append(grid);
