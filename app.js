@@ -47,7 +47,7 @@ function dayKey(s) { return String(s || '').toLowerCase().normalize('NFD').repla
 const DAYS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
 const DAY_NAMES = { lun: 'Lundi', mar: 'Mardi', mer: 'Mercredi', jeu: 'Jeudi', ven: 'Vendredi', sam: 'Samedi', dim: 'Dimanche' };
 const GROUPES = ['Pectoraux', 'Dos', 'Épaules', 'Biceps', 'Triceps', 'Quadriceps', 'Ischios', 'Fessiers', 'Mollets', 'Abdos', 'Autre'];
-const VERSION = '1.12.3', VERSION_DATE = '27/11/2026';
+const VERSION = '1.12.4', VERSION_DATE = '27/11/2026';
 const GROUP_COLORS = { 'Pectoraux': '#ef6f6c', 'Dos': '#5b9dff', 'Épaules': '#f5a35b', 'Biceps': '#3ddc97', 'Triceps': '#b18cff', 'Quadriceps': '#4fd1d9', 'Ischios': '#e4c44f', 'Fessiers': '#ff8fc2', 'Mollets': '#8fbf5b', 'Abdos': '#a8b3c7', 'Autre': '#7d8596' };
 function gcolor(g) { return GROUP_COLORS[g] || GROUP_COLORS['Autre']; }
 const THEMES = [['vert', 'Vert', '#3ddc97'], ['bleu', 'Bleu', '#5b9dff'], ['orange', 'Orange', '#ffa24d'], ['violet', 'Violet', '#b18cff'], ['rose', 'Rose', '#ff7eb6'], ['jaune', 'Jaune', '#f2cf4a']];
@@ -672,7 +672,7 @@ function musicLogo(a, size) {
 }
 function musicBtn() {
   const a = musicApp(); if (!a) return null;
-  return h('button', { class: 'btn ghost musicbtn', onclick: openMusic }, h('span', { class: 'qi' }, musicLogo(a, 26)), h('span', { class: 'ql', text: 'Ouvrir ' + a[1] }));
+  return h('button', { class: 'btn ghost musicbtn', onclick: openMusic }, h('span', { class: 'qi' }, musicLogo(a, 22)), h('span', { class: 'ql', text: 'Ouvrir ' + a[1] }));
 }
 function musicIconBtn() {
   const a = musicApp(); if (!a) return null;
